@@ -1,0 +1,202 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { Input } from '../../src/components/ui/Input';
+import { Button } from '../../src/components/ui/Button';
+import { colors } from '../../src/theme/colors';
+import { typography } from '../../src/theme/typography';
+import { spacing } from '../../src/theme/spacing';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useSnackbar } from '../../src/components/ui/SnackbarContext';
+
+const registerSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+type RegisterForm = z.infer<typeof registerSchema>;
+
+export default function RegisterScreen() {
+  const router = useRouter();
+  const { showSnackbar } = useSnackbar();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true })
+    ]).start();
+  }, []);
+
+  const { control, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = async (data: RegisterForm) => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      showSnackbar('Registration successful! Please login.', 'success');
+      router.push('/(auth)/login');
+    } catch (e) {
+      showSnackbar('Registration failed. Try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Join Closho to start shopping</Text>
+        </Animated.View>
+
+        <Animated.View style={[styles.form, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Controller
+            control={control}
+            name="fullName"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Full Name"
+                placeholder="John Doe"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+                error={errors.fullName?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="email"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Email"
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+                error={errors.email?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="password"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Password"
+                placeholder="Create a password"
+                isPassword
+                onBlur={onBlur}
+                onChangeText={onChange}
+                value={value}
+                error={errors.password?.message}
+              />
+            )}
+          />
+
+          <Button 
+            title="Register" 
+            onPress={handleSubmit(onSubmit)} 
+            isLoading={isLoading} 
+            style={styles.registerBtn}
+          />
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <Button 
+            title="Continue with Google" 
+            variant="outline" 
+            style={styles.googleBtn}
+          />
+        </Animated.View>
+
+        <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <Link href="/(auth)/login" asChild>
+            <Button variant="text" title="Login" />
+          </Link>
+        </Animated.View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: spacing.xl,
+    justifyContent: 'center',
+  },
+  header: {
+    marginBottom: spacing.xxl,
+  },
+  title: {
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.md,
+    color: colors.text.secondary,
+  },
+  form: {
+    marginBottom: spacing.xl,
+  },
+  registerBtn: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    color: colors.text.tertiary,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.fontSize.xs,
+    fontWeight: 'bold',
+  },
+  googleBtn: {
+    marginBottom: spacing.lg,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    color: colors.text.secondary,
+  },
+});
