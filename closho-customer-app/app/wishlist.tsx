@@ -14,9 +14,13 @@ import { Button } from '../src/components/ui/Button';
 
 export default function WishlistScreen() {
   const router = useRouter();
-  const { items, removeFromWishlist } = useWishlistStore();
+  const { items, removeFromWishlist, fetchWishlist } = useWishlistStore();
   const { addToCart } = useCartStore();
   const { showSnackbar } = useSnackbar();
+
+  React.useEffect(() => {
+    fetchWishlist();
+  }, []);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -49,9 +53,9 @@ export default function WishlistScreen() {
                 title="Move to Cart" 
                 variant="outline" 
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.sm }} 
-                onPress={() => {
+                onPress={async () => {
                   Haptics.impactAsync();
-                  addToCart({
+                  const res = await addToCart({
                     productId: product.id,
                     name: product.name,
                     price: product.price,
@@ -61,8 +65,12 @@ export default function WishlistScreen() {
                     quantity: 1,
                     image: product.imageUrl
                   });
-                  removeFromWishlist(product.id);
-                  showSnackbar('Moved to Cart', 'success');
+                  if (res?.success) {
+                    await removeFromWishlist(product.id);
+                    showSnackbar('Moved to Cart', 'success');
+                  } else {
+                    showSnackbar('Failed to move to cart', 'error');
+                  }
                 }} 
               />
             </View>

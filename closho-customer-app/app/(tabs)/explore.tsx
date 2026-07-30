@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -19,11 +19,58 @@ export default function ExploreScreen() {
   const [activeSort, setActiveSort] = useState('Recommended');
   const { showSnackbar } = useSnackbar();
 
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
+
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const api = require('../../src/services/api').default;
+      
+      // Build query string based on filters
+      let query = `/products?page=1&limit=50`;
+      if (searchQuery) query += `&search=${encodeURIComponent(searchQuery)}`;
+      if (activeCategory) query += `&category=${activeCategory.toLowerCase()}`;
+      
+      let sortParam = 'recommended';
+      if (activeSort === 'Price: Low to High') sortParam = 'price_asc';
+      if (activeSort === 'Price: High to Low') sortParam = 'price_desc';
+      if (activeSort === 'Newest Arrivals') sortParam = 'newest';
+      query += `&sort=${sortParam}`;
+
+      const response = await api.get(query);
+      if (response.data.success) {
+        const formattedProducts = response.data.data.products.map((p: any) => ({
+          ...p,
+          price: Number(p.price),
+          originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+          imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+        }));
+        setProducts(formattedProducts);
+      } else {
+        showSnackbar('Failed to load products', 'error');
+      }
+    } catch (error) {
+      console.error('Explore products fetch error:', error);
+      showSnackbar('Error connecting to server', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Re-fetch when filters or search change
+  // Note: For search, you might want to debounce in a real app
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeCategory, activeSort]);
 
   const handleProductPress = (id: string) => {
     router.push(`/product/${id}`);
@@ -34,28 +81,6 @@ export default function ExploreScreen() {
     setIsFilterVisible(false);
     showSnackbar('Filters applied', 'success');
   };
-
-  const filteredProducts = (() => {
-    let results = MOCK_PRODUCTS.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      // Filter by category field, not name
-      const matchesCategory = activeCategory ? (p as any).category === activeCategory : true;
-      return matchesSearch && matchesCategory;
-    });
-
-    // Apply sort
-    if (activeSort === 'Price: Low to High') {
-      results = [...results].sort((a, b) => a.price - b.price);
-    } else if (activeSort === 'Price: High to Low') {
-      results = [...results].sort((a, b) => b.price - a.price);
-    } else if (activeSort === 'Newest Arrivals') {
-      // Reverse natural order as proxy for newest
-      results = [...results].reverse();
-    }
-    // 'Recommended' = default order
-
-    return results;
-  })();
 
   return (
     <View style={styles.container}>
@@ -92,17 +117,22 @@ export default function ExploreScreen() {
       <Animated.ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} style={{ opacity: fadeAnim }}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>All Products</Text>
-          <Text style={styles.resultsCount}>{filteredProducts.length} results</Text>
+          <Text style={styles.resultsCount}>{products.length} results</Text>
         </View>
 
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.text.secondary, marginTop: spacing.md }}>Loading...</Text>
+          </View>
+        ) : products.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
             <Ionicons name="search-outline" size={64} color={colors.text.tertiary} />
             <Text style={{ color: colors.text.secondary, marginTop: spacing.md }}>No products found</Text>
           </View>
         ) : (
           <View style={styles.grid}>
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <ProductCard 
                 key={product.id} 
                 product={product} 

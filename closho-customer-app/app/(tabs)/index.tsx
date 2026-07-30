@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -8,6 +8,8 @@ import { ProductCard, Product } from '../../src/components/product/ProductCard';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Video, ResizeMode } from 'expo-av';
+import { useStoreStore } from '../../src/store/storeStore';
+import api from '../../src/services/api';
 
 const CATEGORIES = [
   { id: '1', name: 'T-Shirt', icon: 'shirt-outline' },
@@ -16,10 +18,12 @@ const CATEGORIES = [
   { id: '4', name: 'Cap', icon: 'glasses-outline' },
   { id: '5', name: 'Shoes', icon: 'footsteps-outline' },
 ];
-import { MOCK_PRODUCTS } from '../../src/data/mockProducts';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { currentStore, fetchNearestStore } = useStoreStore();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Subtle entrance animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -30,7 +34,36 @@ export default function HomeScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true })
     ]).start();
-  }, []);
+
+    // Fetch nearest store if not available (mock coords for Mumbai)
+    if (!currentStore) {
+      fetchNearestStore(19.1197, 72.8468);
+    }
+  }, [currentStore]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!currentStore) return;
+      try {
+        const res = await api.get(`/products?storeId=${currentStore.id}&limit=14`);
+        if (res.data.success) {
+          // Normalize prices from string to number and handle null images
+          const formattedProducts = res.data.data.products.map((p: any) => ({
+            ...p,
+            price: Number(p.price),
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+          }));
+          setProducts(formattedProducts);
+        }
+      } catch (err) {
+        console.error('Failed to fetch home products', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, [currentStore]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -47,7 +80,7 @@ export default function HomeScreen() {
             onPress={() => Haptics.selectionAsync()}
           >
             <Text style={styles.deliveryLabel}>Delivering to </Text>
-            <Text style={styles.storeName}>Closho Andheri</Text>
+            <Text style={styles.storeName}>{currentStore ? currentStore.name : 'Locating...'}</Text>
             <Ionicons name="chevron-down" size={11} color={colors.primary} style={{ marginLeft: 2, marginTop: 1 }} />
           </TouchableOpacity>
         </View>
@@ -121,16 +154,20 @@ export default function HomeScreen() {
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-          {MOCK_PRODUCTS.slice(0, 6).map(product => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              style={styles.horizontalProductCard}
-              onPress={() => router.push(`/product/${product.id}`)} 
-            />
-          ))}
-        </ScrollView>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {products.slice(0, 6).map(product => (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                style={styles.horizontalProductCard}
+                onPress={() => router.push(`/product/${product.id}`)} 
+              />
+            ))}
+          </ScrollView>
+        )}
       </Animated.View>
 
       {/* Trending Reels (Thumbnail trigger) */}
@@ -185,16 +222,20 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>New Arrivals</Text>
         </View>
-        <View style={styles.gridContainer}>
-          {MOCK_PRODUCTS.slice(6, 14).map(product => (
-            <View key={product.id} style={styles.gridItem}>
-              <ProductCard 
-                product={product} 
-                onPress={() => router.push(`/product/${product.id}`)} 
-              />
-            </View>
-          ))}
-        </View>
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <View style={styles.gridContainer}>
+            {products.slice(6, 14).map(product => (
+              <View key={product.id} style={styles.gridItem}>
+                <ProductCard 
+                  product={product} 
+                  onPress={() => router.push(`/product/${product.id}`)} 
+                />
+              </View>
+            ))}
+          </View>
+        )}
       </Animated.View>
 
     </ScrollView>

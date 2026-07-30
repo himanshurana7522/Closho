@@ -38,10 +38,10 @@ export default function CartScreen() {
     showSnackbar('Cart cleared', 'info');
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const result = applyCoupon(couponCode.trim());
+    const result = await applyCoupon(couponCode.trim());
     if (result.success) {
       showSnackbar(result.message, 'success');
       setCouponCode('');

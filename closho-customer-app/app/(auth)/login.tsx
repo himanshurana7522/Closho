@@ -41,16 +41,14 @@ export default function LoginScreen() {
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const mockUser = { id: 'u1', name: data.email.split('@')[0], email: data.email };
-      await setAuth(mockUser, 'mock_jwt_token_123');
+    const result = await useAuthStore.getState().login(data.email, data.password);
+    setIsLoading(false);
+    
+    if (result.success) {
       router.replace('/(tabs)');
       showSnackbar('Successfully logged in!', 'success');
-    } catch (e) {
-      showSnackbar('Invalid credentials. Please try again.', 'error');
-    } finally {
-      setIsLoading(false);
+    } else {
+      showSnackbar(result.error || 'Invalid credentials. Please try again.', 'error');
     }
   };
 
@@ -80,27 +78,46 @@ export default function LoginScreen() {
           />
 
           <View style={styles.forgotPasswordContainer}>
-            <Link href="/(auth)/forgot-password" asChild>
-              <Button variant="text" title="Forgot Password?" style={styles.forgotPassword} />
-            </Link>
+            <Button 
+              variant="text" 
+              title="Forgot Password?" 
+              style={{ height: 'auto', paddingHorizontal: 0 }} 
+              onPress={() => router.push('/(auth)/forgot-password')}
+            />
           </View>
-
-          <Button title="Login" onPress={handleSubmit(onSubmit)} isLoading={isLoading} style={styles.loginBtn} />
-
+          
+          <Button 
+            title={isLoading ? "Signing in..." : "Sign In"} 
+            onPress={handleLogin} 
+            disabled={isLoading} 
+          />
+          
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+            <Text style={styles.dividerText}>OR</Text>
             <View style={styles.divider} />
           </View>
 
-          <Button title="Google" variant="secondary" style={styles.googleBtn} />
+          <Button 
+            title="Continue with Google" 
+            variant="secondary" 
+            style={{ marginBottom: spacing.md }}
+            onPress={() => {}}
+          />
+          <Button 
+            title="Continue with Apple" 
+            variant="secondary" 
+            onPress={() => {}}
+          />
         </Animated.View>
 
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <Link href="/(auth)/register" asChild>
-            <Button variant="text" title="Register" />
-          </Link>
+          <Button 
+            variant="text" 
+            title="Register" 
+            onPress={() => router.push('/(auth)/register')}
+          />
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>

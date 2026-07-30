@@ -40,14 +40,16 @@ export default function RegisterScreen() {
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    // Import useAuthStore if not imported at top
+    const { useAuthStore } = require('../../src/store/authStore');
+    const result = await useAuthStore.getState().register(data.fullName, data.email, data.password);
+    setIsLoading(false);
+    
+    if (result.success) {
       showSnackbar('Registration successful! Please login.', 'success');
       router.push('/(auth)/login');
-    } catch (e) {
-      showSnackbar('Registration failed. Try again.', 'error');
-    } finally {
-      setIsLoading(false);
+    } else {
+      showSnackbar(result.error || 'Registration failed. Try again.', 'error');
     }
   };
 
@@ -127,15 +129,23 @@ export default function RegisterScreen() {
           <Button 
             title="Continue with Google" 
             variant="outline" 
-            style={styles.googleBtn}
+            style={{ marginBottom: spacing.md }} 
+            onPress={() => {}}
           />
-        </Animated.View>
+          <Button 
+            title="Continue with Apple" 
+            variant="outline" 
+            onPress={() => {}}
+          />
 
-        <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <Link href="/(auth)/login" asChild>
-            <Button variant="text" title="Login" />
-          </Link>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Button 
+              variant="text" 
+              title="Sign In" 
+              onPress={() => router.push('/(auth)/login')}
+            />
+          </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>

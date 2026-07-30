@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Animated, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
@@ -10,24 +10,9 @@ import * as Haptics from 'expo-haptics';
 import { useSnackbar } from '../../src/components/ui/SnackbarContext';
 import { useCartStore } from '../../src/store/cartStore';
 import { useWishlistStore } from '../../src/store/wishlistStore';
+import { useStoreStore } from '../../src/store/storeStore';
 
 const { width } = Dimensions.get('window');
-
-import { MOCK_PRODUCTS } from '../../src/data/mockProducts';
-
-const MOCK_PRODUCT_DETAILS = {
-  description: 'Designed for everyday comfort with a clean and timeless look. Made from premium fabric, it offers a perfect fit that\'s easy to wear and ideal for layering.',
-  images: [
-    'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=600&auto=format&fit=crop',
-  ],
-  colors: [
-    { id: 'c1', name: 'Grey', hex: '#A9A9A9' },
-    { id: 'c2', name: 'Black', hex: '#000000' },
-    { id: 'c3', name: 'Cream', hex: '#FFFDD0' },
-  ],
-  sizes: ['S', 'M', 'L', 'XL'],
-  stock: 5,
-};
 
 export default function ProductDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -35,17 +20,12 @@ export default function ProductDetailsScreen() {
   const { showSnackbar } = useSnackbar();
   const { addToCart } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { currentStore } = useStoreStore();
   
-  const baseProduct = MOCK_PRODUCTS.find(p => p.id === id) || MOCK_PRODUCTS[0];
-  const product = {
-    ...MOCK_PRODUCT_DETAILS,
-    ...baseProduct,
-    images: [baseProduct.imageUrl, ...MOCK_PRODUCT_DETAILS.images],
-  };
-
-  const isWishlisted = isInWishlist(product.id);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0].id);
-  const [selectedSize, setSelectedSize] = useState('M');
+  const [product, setProduct] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,6 +33,55 @@ export default function ProductDetailsScreen() {
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
   }, []);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const api = require('../../src/services/api').default;
+        const storeIdParam = currentStore ? `?storeId=${currentStore.id}` : '';
+        const response = await api.get(`/products/${id}${storeIdParam}`);
+        
+        if (response.data.success) {
+          const p = response.data.data;
+          
+          // Format based on API Contract
+          const formatted = {
+            id: p.id,
+            name: p.name,
+            description: p.description || 'Designed for everyday comfort with a clean and timeless look.',
+            price: Number(p.price),
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            discount: p.discountPercent,
+            images: p.images?.length > 0 ? p.images : ['https://via.placeholder.com/600x800?text=No+Image'],
+            imageUrl: p.images?.[0] || 'https://via.placeholder.com/600x800?text=No+Image',
+            rating: p.rating || 4.5,
+            reviews: p.reviewCount || 0,
+            stock: p.variants?.[0]?.stock || 0,
+            colors: p.variants ? 
+              Array.from(new Set(p.variants.map((v: any) => v.color))).map((c: any) => ({
+                id: c,
+                name: c,
+                hex: p.variants.find((v: any) => v.color === c)?.colorHex || '#000000'
+              })) : [{ id: 'c1', name: 'Default', hex: '#000000' }],
+            sizes: p.variants ? 
+              Array.from(new Set(p.variants.map((v: any) => v.size))) : ['M'],
+          };
+          
+          setProduct(formatted);
+          setSelectedColor(formatted.colors[0]?.id);
+          setSelectedSize(formatted.sizes[0]);
+        } else {
+          showSnackbar('Failed to load product', 'error');
+        }
+      } catch (err) {
+        console.error('Error fetching product details', err);
+        showSnackbar('Error connecting to server', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id, currentStore]);
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 300],
@@ -71,6 +100,7 @@ export default function ProductDetailsScreen() {
   };
 
   const handleWishlistToggle = () => {
+    if (!product) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleWishlist({
       id: product.id,
@@ -84,6 +114,17 @@ export default function ProductDetailsScreen() {
       'info'
     );
   };
+
+  if (isLoading || !product) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.md, color: colors.text.secondary }}>Loading product...</Text>
+      </View>
+    );
+  }
+
+  const isWishlisted = isInWishlist(product.id);
 
   return (
     <View style={styles.container}>
@@ -111,12 +152,12 @@ export default function ProductDetailsScreen() {
       >
         <View style={styles.imageGallery}>
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {product.images.map((img, index) => (
+            {product.images.map((img: string, index: number) => (
               <Image key={index} source={{ uri: img }} style={styles.productImage} />
             ))}
           </ScrollView>
           <View style={styles.pagination}>
-            {product.images.map((_, index) => (
+            {product.images.map((_: any, index: number) => (
               <View key={index} style={[styles.dot, index === 0 && styles.dotActive]} />
             ))}
           </View>
@@ -155,7 +196,7 @@ export default function ProductDetailsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Color</Text>
             <View style={styles.selectorRow}>
-              {product.colors.map(c => (
+              {product.colors.map((c: any) => (
                 <TouchableOpacity 
                   key={c.id} 
                   style={[styles.colorCircle, selectedColor === c.id && styles.colorCircleSelected]}
@@ -173,7 +214,7 @@ export default function ProductDetailsScreen() {
               {product.stock <= 5 && <Text style={styles.lowStock}>Only {product.stock} left</Text>}
             </View>
             <View style={styles.selectorRow}>
-              {product.sizes.map(s => (
+              {product.sizes.map((s: string) => (
                 <TouchableOpacity 
                   key={s} 
                   style={[styles.sizeBox, selectedSize === s && styles.sizeBoxSelected]}
@@ -199,7 +240,7 @@ export default function ProductDetailsScreen() {
           style={styles.checkoutBtn} 
           onPress={() => {
             Haptics.impactAsync();
-            const colorObj = product.colors.find(c => c.id === selectedColor);
+            const colorObj = product.colors.find((c: any) => c.id === selectedColor);
             addToCart({
               productId: product.id,
               name: product.name,
@@ -217,10 +258,10 @@ export default function ProductDetailsScreen() {
         <Button 
           title="Add to Cart" 
           style={styles.addToCartBtn} 
-          onPress={() => {
+          onPress={async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            const colorObj = product.colors.find(c => c.id === selectedColor);
-            addToCart({
+            const colorObj = product.colors.find((c: any) => c.id === selectedColor);
+            await addToCart({
               productId: product.id,
               name: product.name,
               price: product.price,
