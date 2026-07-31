@@ -88,7 +88,7 @@ export default function LoginScreen() {
           
           <Button 
             title={isLoading ? "Signing in..." : "Sign In"} 
-            onPress={handleLogin} 
+            onPress={handleSubmit(onSubmit)} 
             disabled={isLoading} 
           />
           
