@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
@@ -60,8 +60,13 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Image 
+            source={require('../../assets/images/closho-logo-premium.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join Closho to start shopping</Text>
+          <Text style={styles.subtitle}>Sign up to start shopping</Text>
         </Animated.View>
 
         <Animated.View style={[styles.form, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -164,6 +169,12 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xxl,
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
   },
   title: {
     fontSize: typography.fontSize.xxxl,

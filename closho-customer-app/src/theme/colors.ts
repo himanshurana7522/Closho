@@ -1,25 +1,25 @@
 export const colors = {
-  // Pure black base for premium feel
-  background: '#000000',
-  surface: '#111111',
-  surfaceLight: '#1A1A1A',
+  // Matte black base for premium feel
+  background: '#0A0A0A',
+  surface: '#121212',
+  surfaceLight: '#1C1C1C',
   
-  // Elegant gold/yellow accent
-  primary: '#F5C518',
-  primaryDark: '#D4A80C',
-  primaryLight: '#FDF0B5',
+  // Champagne Gold accent
+  primary: '#D4AF37',
+  primaryDark: '#B28A25',
+  primaryLight: '#F2D588',
 
   // Typography
   text: {
     primary: '#FFFFFF',
-    secondary: '#A3A3A3',
+    secondary: '#B3B3B3',
     tertiary: '#737373',
-    inverse: '#000000',
+    inverse: '#0A0A0A',
   },
 
   // Borders & Dividers
-  border: '#262626',
-  borderLight: '#171717',
+  border: '#2A2A2A',
+  borderLight: '#1F1F1F',
 
   // Status
   status: {
@@ -29,9 +29,10 @@ export const colors = {
     info: '#3B82F6',
   },
 
-  // Premium transparent overlays
+  // Premium transparent overlays (Glassmorphism)
   overlay: {
-    dark: 'rgba(0,0,0,0.7)',
-    light: 'rgba(255,255,255,0.1)',
+    dark: 'rgba(10,10,10,0.85)',
+    light: 'rgba(255,255,255,0.05)',
+    glass: 'rgba(255, 255, 255, 0.03)',
   }
 };

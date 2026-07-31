@@ -73,7 +73,11 @@ export default function HomeScreen() {
 
         {/* LEFT: Row 1 = Logo | Row 2 = Store selector */}
         <View style={styles.headerLeft}>
-          <Text style={styles.logoText}>Closho</Text>
+          <Image 
+            source={require('../../assets/images/closho-logo-premium.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <TouchableOpacity
             style={styles.locationRow}
             activeOpacity={0.7}
@@ -262,13 +266,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: spacing.md,
   },
-  logoText: {
-    color: colors.text.primary,
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    lineHeight: 34,
-    marginBottom: 4,
+  logoImage: {
+    width: 100,
+    height: 40,
+    marginBottom: spacing.xs,
   },
   locationRow: {
     flexDirection: 'row',

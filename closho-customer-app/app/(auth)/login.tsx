@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { Input } from '../../src/components/ui/Input';
@@ -56,6 +56,11 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Image 
+            source={require('../../assets/images/closho-logo-premium.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Login to your account to continue</Text>
         </Animated.View>
@@ -136,6 +141,12 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xxl,
+  },
+  logoImage: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
   },
   title: {
     fontSize: typography.fontSize.xxxl,
