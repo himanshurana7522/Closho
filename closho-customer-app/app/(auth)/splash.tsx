@@ -36,11 +36,11 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoMark}>CS</Text>
-        </View>
-        <Text style={styles.logoText}>CLOSHO</Text>
-        <Text style={styles.subLogoText}>CLOTHES & SHOES</Text>
+        <Image 
+          source={require('../../assets/images/closho-logo-premium-transparent.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </Animated.View>
 
       <View style={styles.bottomContent}>
@@ -63,27 +63,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoContainer: {
-    marginBottom: spacing.md,
-  },
-  logoMark: {
-    fontSize: 56,
-    color: colors.primary, // Champagne gold
-    fontFamily: typography.fontFamily.bold,
-    letterSpacing: 2,
-  },
-  logoText: {
-    fontSize: typography.fontSize.xxxl + 4,
-    fontWeight: '300',
-    color: colors.primary,
-    letterSpacing: 8,
-    marginBottom: spacing.xs,
-  },
-  subLogoText: {
-    fontSize: typography.fontSize.xs,
-    color: colors.primaryLight,
-    letterSpacing: 4,
-    fontWeight: '600',
+  logoImage: {
+    width: 250,
+    height: 250,
   },
   bottomContent: {
     alignItems: 'center',

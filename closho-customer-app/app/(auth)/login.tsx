@@ -56,7 +56,11 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={styles.logoText}>CLOSHO</Text>
+          <Image 
+            source={require('../../assets/images/closho-logo-premium-transparent.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Login to your account to continue</Text>
         </Animated.View>
@@ -138,11 +142,10 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.xxl,
   },
-  logoText: {
-    fontSize: 28,
-    color: colors.primary,
-    letterSpacing: 4,
-    marginBottom: spacing.lg,
+  logoImage: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.md,
     alignSelf: 'flex-start',
   },
   title: {
