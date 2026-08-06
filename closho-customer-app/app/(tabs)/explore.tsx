@@ -45,13 +45,18 @@ export default function ExploreScreen() {
 
       const response = await api.get(query);
       if (response.data.success) {
-        const formattedProducts = response.data.data.products.map((p: any) => ({
-          ...p,
-          price: Number(p.price),
-          originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-          imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
-        }));
-        setProducts(formattedProducts);
+        const responseData = response.data.data;
+        const productsArray = Array.isArray(responseData) ? responseData : responseData?.products;
+        
+        if (productsArray) {
+          const formattedProducts = productsArray.map((p: any) => ({
+            ...p,
+            price: Number(p.price),
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+          }));
+          setProducts(formattedProducts);
+        }
       } else {
         showSnackbar('Failed to load products', 'error');
       }

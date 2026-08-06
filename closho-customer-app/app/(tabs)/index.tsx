@@ -43,18 +43,23 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!currentStore) return;
       try {
-        const res = await api.get(`/products?storeId=${currentStore.id}&limit=14`);
+        const url = currentStore ? `/products?storeId=${currentStore.id}&limit=14` : `/products?limit=14`;
+        const res = await api.get(url);
         if (res.data.success) {
-          // Normalize prices from string to number and handle null images
-          const formattedProducts = res.data.data.products.map((p: any) => ({
-            ...p,
-            price: Number(p.price),
-            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-            imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
-          }));
-          setProducts(formattedProducts);
+          const responseData = res.data.data;
+          const productsArray = Array.isArray(responseData) ? responseData : responseData?.products;
+          
+          if (productsArray) {
+            // Normalize prices from string to number and handle null images
+            const formattedProducts = productsArray.map((p: any) => ({
+              ...p,
+              price: Number(p.price),
+              originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+              imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+            }));
+            setProducts(formattedProducts);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch home products', err);

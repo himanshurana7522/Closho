@@ -36,13 +36,20 @@ export const useStoreStore = create<StoreState>((set) => ({
     try {
       const api = require('../services/api').default;
       const response = await api.get(`/stores/nearest?lat=${lat}&lng=${lng}&radius=10`);
-      if (response.data.success && response.data.data.stores?.length > 0) {
-        const store = response.data.data.stores[0];
+      const responseData = response.data.data;
+      const storesArray = Array.isArray(responseData) ? responseData : responseData?.stores;
+      
+      if (response.data.success && storesArray && storesArray.length > 0) {
+        const store = storesArray[0];
         await AsyncStorage.setItem('currentStore', JSON.stringify(store));
         set({ currentStore: store });
+      } else {
+        // If no store is found, don't crash, just log softly
+        console.log('No nearby store found, falling back to all products.');
       }
     } catch (error) {
-      console.error('Error fetching nearest store', error);
+      // Silently catch the error to prevent red error toasts globally
+      console.log('Nearest store fetch skipped due to network/server issue.');
     }
   },
 }));
