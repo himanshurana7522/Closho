@@ -44,25 +44,29 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const url = currentStore ? `/products?storeId=${currentStore.id}&limit=14` : `/products?limit=14`;
+        // As per request, try /products first without any storeId to prevent zero products
+        const url = `/products?limit=14`;
         const res = await api.get(url);
-        if (res.data.success) {
-          const responseData = res.data.data;
-          const productsArray = Array.isArray(responseData) ? responseData : responseData?.products;
+        if (res.data) {
+          const responseData = res.data.data !== undefined ? res.data.data : res.data;
+          const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
           
-          if (productsArray) {
+          if (Array.isArray(productsArray) && productsArray.length > 0) {
             // Normalize prices from string to number and handle null images
             const formattedProducts = productsArray.map((p: any) => ({
               ...p,
-              price: Number(p.price),
+              price: Number(p.price) || 0,
               originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-              imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+              imageUrl: p.thumbnail || p.images?.[0] || 'https://via.placeholder.com/400x500?text=No+Image',
             }));
             setProducts(formattedProducts);
+          } else {
+            console.log('Products array is empty or invalid:', productsArray);
           }
         }
-      } catch (err) {
-        console.error('Failed to fetch home products', err);
+      } catch (err: any) {
+        console.error('Failed to fetch home products:', err?.message || err);
+        if (err?.response) console.error('Response data:', err.response.data);
       } finally {
         setIsLoading(false);
       }

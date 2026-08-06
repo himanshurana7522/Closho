@@ -44,18 +44,21 @@ export default function ExploreScreen() {
       query += `&sort=${sortParam}`;
 
       const response = await api.get(query);
-      if (response.data.success) {
-        const responseData = response.data.data;
-        const productsArray = Array.isArray(responseData) ? responseData : responseData?.products;
+      if (response.data) {
+        const responseData = response.data.data !== undefined ? response.data.data : response.data;
+        const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
         
-        if (productsArray) {
+        if (Array.isArray(productsArray) && productsArray.length > 0) {
           const formattedProducts = productsArray.map((p: any) => ({
             ...p,
-            price: Number(p.price),
+            price: Number(p.price) || 0,
             originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-            imageUrl: p.thumbnail || 'https://via.placeholder.com/400x500?text=No+Image',
+            imageUrl: p.thumbnail || p.images?.[0] || 'https://via.placeholder.com/400x500?text=No+Image',
           }));
           setProducts(formattedProducts);
+        } else {
+          console.log('Explore products array is empty or invalid:', productsArray);
+          showSnackbar('No products found', 'info');
         }
       } else {
         showSnackbar('Failed to load products', 'error');
