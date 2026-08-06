@@ -3,7 +3,7 @@ import { env } from '../config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const api = axios.create({
-  baseURL: env.API_URL,
+  baseURL: 'https://api-closho.onrender.com', // Using hardcoded URL per requirements
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -32,10 +32,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      // Add a custom message for cold start timeout
+      error.message = 'The server is taking longer than usual to respond. It might be waking up, please try again.';
+    } else if (error.response?.status === 401) {
       // Handle unauthorized (e.g., logout user, clear token)
       await AsyncStorage.removeItem('userToken');
-      // Here you could also trigger a global event or Zustand store update to redirect to Login
     }
     return Promise.reject(error);
   }

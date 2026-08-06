@@ -1,37 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
 import { spacing } from '../../src/theme/spacing';
 import * as Haptics from 'expo-haptics';
 import { useSnackbar } from '../../src/components/ui/SnackbarContext';
+import { useOrderStore } from '../../src/store/orderStore';
+import { useCallback } from 'react';
+import { ActivityIndicator } from 'react-native';
 
 const TABS = ['All', 'Ordered', 'Shipped', 'Delivered', 'Cancelled'];
 
-const MOCK_ORDERS = [
-  {
-    id: 'ORD-89432',
-    date: '24 Jul 2026',
-    status: 'Delivered',
-    total: 169.99,
-    itemsCount: 3,
-    previewImage: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=100&auto=format&fit=crop'
-  },
-  {
-    id: 'ORD-89401',
-    date: '10 Jul 2026',
-    status: 'Shipped',
-    total: 45.00,
-    itemsCount: 1,
-    previewImage: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=100&auto=format&fit=crop'
-  }
-];
+
 
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState('All');
   const { showSnackbar } = useSnackbar();
   const router = useRouter();
+  const { orders, isLoading, fetchOrders } = useOrderStore();
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [])
+  );
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -79,7 +72,14 @@ export default function OrdersScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {MOCK_ORDERS.filter(order => activeTab === 'All' || order.status === activeTab).map(order => (
+        {isLoading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xxxl }} />
+        ) : orders.length === 0 ? (
+          <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
+            <Text style={{ color: colors.text.secondary, fontSize: typography.fontSize.lg }}>No orders found.</Text>
+          </View>
+        ) : (
+          orders.filter(order => activeTab === 'All' || order.status.toLowerCase() === activeTab.toLowerCase()).map(order => (
           <TouchableOpacity 
             key={order.id} 
             style={styles.orderCard} 
@@ -115,7 +115,7 @@ export default function OrdersScreen() {
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
-        ))}
+        )))}
       </ScrollView>
     </View>
   );

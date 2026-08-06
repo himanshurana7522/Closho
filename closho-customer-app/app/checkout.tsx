@@ -9,11 +9,17 @@ import { Button } from '../src/components/ui/Button';
 import * as Haptics from 'expo-haptics';
 import { useCartStore } from '../src/store/cartStore';
 import { useProfileStore } from '../src/store/profileStore';
+import { useOrderStore } from '../src/store/orderStore';
+import { useStoreStore } from '../src/store/storeStore';
+import { useSnackbar } from '../src/components/ui/SnackbarContext';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { items, getCartTotal, discountAmount, clearCart } = useCartStore();
+  const { items, getCartTotal, discountAmount, clearCart, couponCode } = useCartStore();
   const { addresses, paymentMethods } = useProfileStore();
+  const { createOrder } = useOrderStore();
+  const { currentStore } = useStoreStore();
+  const { showSnackbar } = useSnackbar();
 
   const defaultAddress = addresses.find(a => a.isDefault) || addresses[0];
   const defaultPayment = paymentMethods.find(p => p.isDefault) || paymentMethods[0];
@@ -43,27 +49,46 @@ export default function CheckoutScreen() {
 
   const handlePlaceOrder = async () => {
     if (!selectedAddressId) {
+      showSnackbar('Please select a delivery address', 'error');
+      return;
+    }
+    if (!currentStore?.id) {
+      showSnackbar('Store context lost. Please return to home', 'error');
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsPlacingOrder(true);
+    
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const paymentMethod = paymentMethods.find(p => p.id === selectedPaymentId)?.brand || 'cod';
+      
+      const response = await createOrder({
+        storeId: currentStore.id,
+        addressId: selectedAddressId,
+        paymentMethod: paymentMethod.toLowerCase(),
+        couponCode: couponCode
+      });
 
-      // Clear cart after successful order
-      clearCart();
+      if (response.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // Clear cart after successful order
+        clearCart();
 
-      setShowSuccessModal(true);
-      Animated.spring(successScaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
+        setShowSuccessModal(true);
+        Animated.spring(successScaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 5,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        showSnackbar(response.error || 'Failed to place order', 'error');
+      }
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showSnackbar('Something went wrong', 'error');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -167,7 +192,7 @@ export default function CheckoutScreen() {
                       <Text style={styles.optionLabel}>{pm.brand} •••• {pm.last4}</Text>
                       {pm.isDefault && <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>DEFAULT</Text></View>}
                     </View>
-                    <Text style={styles.optionSub}>Expires {pm.expiry}</Text>
+                    <Text style={styles.optionSub}>Expires {pm.exp}</Text>
                   </View>
                 </View>
                 <View style={[styles.radioOuter, selectedPaymentId === pm.id && styles.radioOuterSelected]}>
