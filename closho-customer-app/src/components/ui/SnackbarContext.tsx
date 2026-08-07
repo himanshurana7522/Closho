@@ -87,7 +87,7 @@ export const SnackbarProvider = ({ children }: { children: ReactNode }) => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     alignItems: 'center',
   },

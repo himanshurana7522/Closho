@@ -9,8 +9,12 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, fetchProfile } = useAuthStore();
   const router = useRouter();
+
+  React.useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);

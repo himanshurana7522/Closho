@@ -64,7 +64,7 @@ export default function ProductDetailsScreen() {
                 hex: p.variants.find((v: any) => v.color === c)?.colorHex || '#000000'
               })) : [{ id: 'c1', name: 'Default', hex: '#000000' }],
             sizes: p.variants ? 
-              Array.from(new Set(p.variants.map((v: any) => v.size))) : ['M'],
+              Array.from(new Set(p.variants.map((v: any) => String(v.size)))) : ['M'],
           };
           
           setProduct(formatted);

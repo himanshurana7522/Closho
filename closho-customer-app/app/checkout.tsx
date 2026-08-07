@@ -150,7 +150,11 @@ export default function CheckoutScreen() {
                       <Text style={styles.optionLabel}>{addr.type}</Text>
                       {addr.isDefault && <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>DEFAULT</Text></View>}
                     </View>
-                    <Text style={styles.optionSub}>{addr.address}</Text>
+                    <Text style={styles.optionSub}>
+                      {addr.addressLine1}
+                      {addr.addressLine2 ? `, ${addr.addressLine2}` : ''}
+                      {`\n${addr.city}, ${addr.state} - ${addr.pincode}`}
+                    </Text>
                   </View>
                 </View>
                 <View style={[styles.radioOuter, selectedAddressId === addr.id && styles.radioOuterSelected]}>

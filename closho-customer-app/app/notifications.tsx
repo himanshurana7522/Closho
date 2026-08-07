@@ -1,37 +1,31 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../src/theme/colors';
 import { typography } from '../src/theme/typography';
 import { spacing } from '../src/theme/spacing';
 import * as Haptics from 'expo-haptics';
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    title: 'Order Delivered!',
-    message: 'Your order #ORD-89432 has been delivered successfully. Enjoy your new outfit!',
-    time: '2 hours ago',
-    type: 'order',
-    isRead: false
-  },
-  {
-    id: '2',
-    title: 'Flash Sale: 50% OFF',
-    message: 'Hurry up! The midnight flash sale is live. Get 50% off on all sneakers.',
-    time: '5 hours ago',
-    type: 'promo',
-    isRead: true
-  }
-];
+import { useNotificationStore } from '../src/store/notificationStore';
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { notifications, isLoading, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
+  };
+
+  const handlePress = (id: string, isRead: boolean) => {
+    Haptics.selectionAsync();
+    if (!isRead) {
+      markAsRead(id);
+    }
   };
 
   const getIcon = (type: string) => {
@@ -49,28 +43,39 @@ export default function NotificationsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={markAllAsRead}>
+          <Text style={styles.markAllText}>Mark all read</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {MOCK_NOTIFICATIONS.map((notif) => (
-          <TouchableOpacity 
-            key={notif.id} 
-            style={[styles.notificationCard, !notif.isRead && styles.unreadCard]}
-            onPress={() => Haptics.selectionAsync()}
-          >
-            <View style={styles.iconWrapper}>
-              <Ionicons name={getIcon(notif.type)} size={24} color={colors.primary} />
-            </View>
-            <View style={styles.content}>
-              <View style={styles.contentHeader}>
-                <Text style={styles.title}>{notif.title}</Text>
-                <Text style={styles.time}>{notif.time}</Text>
+        {isLoading && notifications.length === 0 ? (
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        ) : notifications.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="notifications-off-outline" size={64} color={colors.text.tertiary} />
+            <Text style={styles.emptyText}>No notifications yet.</Text>
+          </View>
+        ) : (
+          notifications.map((notif) => (
+            <TouchableOpacity 
+              key={notif.id} 
+              style={[styles.notificationCard, !notif.isRead && styles.unreadCard]}
+              onPress={() => handlePress(notif.id, notif.isRead)}
+            >
+              <View style={styles.iconWrapper}>
+                <Ionicons name={getIcon(notif.type)} size={24} color={colors.primary} />
               </View>
-              <Text style={styles.message}>{notif.message}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.content}>
+                <View style={styles.contentHeader}>
+                  <Text style={styles.title}>{notif.title}</Text>
+                  <Text style={styles.time}>{new Date(notif.createdAt).toLocaleDateString()}</Text>
+                </View>
+                <Text style={styles.message}>{notif.message}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -99,9 +104,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.text.primary,
   },
+  markAllText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    fontWeight: '600'
+  },
   scrollContent: {
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl * 2 },
+  emptyText: { fontSize: typography.fontSize.md, color: colors.text.tertiary, marginTop: spacing.md },
   notificationCard: {
     flexDirection: 'row',
     padding: spacing.lg,
@@ -112,16 +125,16 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   unreadCard: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '05',
+    backgroundColor: colors.primary + '0A',
+    borderColor: colors.primary + '30',
   },
   iconWrapper: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
+    backgroundColor: colors.primary + '10',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: spacing.md,
   },
   content: {
@@ -134,19 +147,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
-    color: colors.text.primary,
-    fontWeight: 'bold',
     fontSize: typography.fontSize.md,
+    fontWeight: 'bold',
+    color: colors.text.primary,
     flex: 1,
     marginRight: spacing.sm,
   },
   time: {
-    color: colors.text.secondary,
     fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
   },
   message: {
-    color: colors.text.secondary,
     fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
     lineHeight: 20,
-  }
+  },
 });

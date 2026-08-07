@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors } from '../src/theme/colors';
@@ -11,33 +11,65 @@ import { useProfileStore } from '../src/store/profileStore';
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();
-  const { paymentMethods, addPaymentMethod, removePaymentMethod, setDefaultPaymentMethod } = useProfileStore();
+  const { paymentMethods, isLoading, fetchPaymentMethods, addPaymentMethod, removePaymentMethod, setDefaultPaymentMethod } = useProfileStore();
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
+
+  useEffect(() => {
+    fetchPaymentMethods();
+  }, [fetchPaymentMethods]);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
-  const handleAddCard = () => {
-    if (cardNumber.length < 4) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleAddCard = async () => {
+    if (cardNumber.length < 4) {
+      Alert.alert('Error', 'Please enter a valid card number');
+      return;
+    }
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsSubmitting(true);
+    
     const last4 = cardNumber.slice(-4);
     // Simple logic to guess brand from first digit
     const brand = cardNumber.startsWith('4') ? 'Visa' : (cardNumber.startsWith('5') ? 'Mastercard' : 'Card');
     
-    addPaymentMethod({
-      id: Date.now().toString(),
+    const res = await addPaymentMethod({
       brand,
       last4,
       exp: expiry || '12/30',
-      isDefault: false
+      isDefault: paymentMethods.length === 0
     });
-    setModalVisible(false);
-    setCardNumber('');
-    setExpiry('');
+    
+    setIsSubmitting(false);
+    
+    if (res.success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setModalVisible(false);
+      setCardNumber('');
+      setExpiry('');
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', res.message || 'Failed to add payment method');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Remove Card', 'Are you sure you want to remove this card?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removePaymentMethod(id) }
+    ]);
+  };
+
+  const handleSetDefault = async (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await setDefaultPaymentMethod(id);
   };
 
   return (
@@ -51,7 +83,11 @@ export default function PaymentMethodsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {paymentMethods.length === 0 ? (
+        {isLoading && paymentMethods.length === 0 ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : paymentMethods.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="card-outline" size={64} color={colors.text.tertiary} />
             <Text style={styles.emptyText}>No payment methods saved.</Text>
@@ -77,11 +113,11 @@ export default function PaymentMethodsScreen() {
               </View>
               <View style={styles.actions}>
                 {!card.isDefault && (
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => { Haptics.impactAsync(); setDefaultPaymentMethod(card.id); }}>
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => handleSetDefault(card.id)}>
                     <Text style={styles.actionText}>Make Default</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={styles.actionBtn} onPress={() => { Haptics.impactAsync(); removePaymentMethod(card.id); }}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(card.id)}>
                   <Text style={[styles.actionText, { color: colors.status.error }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
@@ -129,7 +165,12 @@ export default function PaymentMethodsScreen() {
                 maxLength={5}
               />
               
-              <Button title="Save Card" onPress={handleAddCard} style={{ marginTop: spacing.xl }} />
+              <Button 
+                title={isSubmitting ? "Saving..." : "Save Card"} 
+                disabled={isSubmitting}
+                onPress={handleAddCard} 
+                style={{ marginTop: spacing.xl, marginBottom: spacing.xl }} 
+              />
             </View>
           </View>
         </View>
@@ -139,158 +180,31 @@ export default function PaymentMethodsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  backBtn: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxxl * 4,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing.xxxl * 2,
-  },
-  emptyText: {
-    color: colors.text.secondary,
-    marginTop: spacing.md,
-    fontSize: typography.fontSize.md,
-  },
-  cardItemWrapper: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  cardItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: spacing.md,
-    marginTop: spacing.md,
-  },
-  actionBtn: {
-    marginRight: spacing.lg,
-  },
-  actionText: {
-    color: colors.text.primary,
-    fontWeight: 'bold',
-  },
-  cardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  cardBrand: {
-    color: colors.text.primary,
-    fontWeight: 'bold',
-    fontSize: typography.fontSize.md,
-    marginBottom: 4,
-  },
-  cardExp: {
-    color: colors.text.secondary,
-    fontSize: typography.fontSize.sm,
-  },
-  defaultBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  defaultText: {
-    color: colors.primary,
-    fontSize: typography.fontSize.xs,
-    fontWeight: 'bold',
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 34 : spacing.xl,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  modalTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: 'bold',
-    color: colors.text.primary,
-  },
-  closeBtn: {
-    padding: spacing.xs,
-  },
-  modalBody: {
-    padding: spacing.xl,
-  },
-  inputLabel: {
-    color: colors.text.primary,
-    fontWeight: 'bold',
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
-    fontSize: typography.fontSize.md,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: 12,
-    padding: spacing.md,
-    color: colors.text.primary,
-    fontSize: typography.fontSize.md,
-    height: 48,
-  }
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  backBtn: { padding: spacing.xs },
+  headerTitle: { fontSize: typography.fontSize.lg, fontWeight: 'bold', color: colors.text.primary },
+  scrollContent: { padding: spacing.lg, paddingBottom: 100 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl * 2 },
+  emptyText: { fontSize: typography.fontSize.md, color: colors.text.tertiary, marginTop: spacing.md },
+  cardItemWrapper: { backgroundColor: colors.surface, borderRadius: 16, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.borderLight, overflow: 'hidden' },
+  cardItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg },
+  cardLeft: { flexDirection: 'row', alignItems: 'center' },
+  iconWrapper: { width: 48, height: 32, backgroundColor: colors.background, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md, borderWidth: 1, borderColor: colors.borderLight },
+  cardBrand: { fontSize: typography.fontSize.md, fontWeight: '600', color: colors.text.primary, marginBottom: 2 },
+  cardExp: { fontSize: typography.fontSize.sm, color: colors.text.secondary },
+  defaultBadge: { backgroundColor: colors.primary + '20', paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: 12 },
+  defaultText: { fontSize: typography.fontSize.xs, fontWeight: '600', color: colors.primary },
+  actions: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.borderLight, padding: spacing.md, backgroundColor: colors.surface },
+  actionBtn: { marginRight: spacing.xl },
+  actionText: { fontSize: typography.fontSize.sm, fontWeight: '600', color: colors.primary },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.lg, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: spacing.lg },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  modalTitle: { fontSize: typography.fontSize.lg, fontWeight: 'bold', color: colors.text.primary },
+  closeBtn: { padding: spacing.xs },
+  modalBody: { paddingVertical: spacing.lg },
+  inputLabel: { fontSize: typography.fontSize.sm, fontWeight: '600', color: colors.text.primary, marginBottom: spacing.xs, marginTop: spacing.md },
+  textInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderLight, borderRadius: 8, padding: spacing.md, fontSize: typography.fontSize.md, color: colors.text.primary },
 });

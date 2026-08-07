@@ -7,7 +7,8 @@ interface AuthStore extends AuthState {
   setAuth: (user: User, token: string) => Promise<void>;
   login: (emailOrPhone: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  updateUser: (userData: Partial<User>) => Promise<void>;
+  updateUser: (userData: Partial<User>) => Promise<{ success: boolean; message?: string }>;
+  fetchProfile: () => Promise<void>;
   logout: () => Promise<void>;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
@@ -74,9 +75,32 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       updateUser: async (userData: Partial<User>) => {
-        set((state) => ({
-          user: state.user ? { ...state.user, ...userData } : null,
-        }));
+        try {
+          const api = require('../services/api').default;
+          const res = await api.put('/user/profile', userData);
+          if (res.data.success) {
+            set((state) => ({
+              user: state.user ? { ...state.user, ...userData } : null,
+            }));
+            return { success: true };
+          }
+          return { success: false, message: res.data.message };
+        } catch (error: any) {
+          console.error('Update profile error', error);
+          return { success: false, message: error.message };
+        }
+      },
+
+      fetchProfile: async () => {
+        try {
+          const api = require('../services/api').default;
+          const response = await api.get('/auth/me');
+          if (response.data.success && response.data.data) {
+            set({ user: response.data.data });
+          }
+        } catch (error) {
+          console.error('Fetch profile error', error);
+        }
       },
 
       logout: async () => {

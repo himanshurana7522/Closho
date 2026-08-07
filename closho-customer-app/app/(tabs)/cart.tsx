@@ -83,7 +83,7 @@ export default function CartScreen() {
         <View style={styles.itemsList}>
           {items.map(item => (
             <View key={item.id} style={styles.cartItem}>
-              <Image source={{ uri: item.image }} style={styles.itemImage} />
+              <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.itemImage} />
               
               <View style={styles.itemDetails}>
                 <View style={styles.itemHeader}>

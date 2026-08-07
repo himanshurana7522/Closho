@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useStoreStore } from './storeStore';
 
 export interface CartItem {
   id: string; // Unique cart item ID (usually productId + selected color + size)
@@ -37,8 +38,10 @@ export const useCartStore = create<CartState>()(
       addToCart: async (newItem) => {
         try {
           const api = require('../services/api').default;
+          const currentStore = useStoreStore.getState().currentStore;
           // In a real app we'd map this to a variantId. For now, pass what we have.
           const res = await api.post('/cart/items', {
+            storeId: currentStore?.id,
             productId: newItem.productId,
             quantity: newItem.quantity,
             // Assuming the backend can handle size/color if variantId is missing, or we just rely on local state grouping for now if backend cart isn't strict.
@@ -140,7 +143,7 @@ export const useCartStore = create<CartState>()(
             // For now, assuming backend matches or we use what we have locally since it's just a PoC migration.
             // If the backend returns empty or we want to trust local state until full backend implementation, we can merge.
             // We'll set items to whatever backend returns if it matches our schema.
-            // set({ items: res.data.data.items });
+            set({ items: res.data.data.items || [] });
           }
         } catch (error) {
           console.error('Fetch cart error', error);

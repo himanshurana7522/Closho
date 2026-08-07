@@ -27,9 +27,13 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await updateUser({ name, email });
-    showSnackbar('Profile updated successfully', 'success');
-    router.back();
+    const res = await updateUser({ name, email });
+    if (res && !res.success) {
+      showSnackbar(res.message || 'Failed to update profile', 'error');
+    } else {
+      showSnackbar('Profile updated successfully', 'success');
+      router.back();
+    }
   };
 
   return (

@@ -17,6 +17,8 @@ export interface Product {
   originalPrice?: number;
   discount?: number;
   rating: number;
+  reviews?: number;
+  category?: string;
   imageUrl: string;
   isWishlisted?: boolean;
 }
