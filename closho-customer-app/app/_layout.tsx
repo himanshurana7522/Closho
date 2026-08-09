@@ -16,18 +16,8 @@ export default function RootLayout() {
   // Load auth state on app start
   useEffect(() => {
     const loadAuth = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        const userDataStr = await AsyncStorage.getItem('userData');
-        if (token && userDataStr) {
-          const user: User = JSON.parse(userDataStr);
-          await setAuth(user, token);
-        }
-      } catch (e) {
-        console.error('Error loading auth', e);
-      } finally {
+        // Zustand persist handles hydration automatically, so we don't need to manually read from AsyncStorage.
         setLoading(false);
-      }
     };
     loadAuth();
   }, []);

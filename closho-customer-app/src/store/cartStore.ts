@@ -13,6 +13,7 @@ export interface CartItem {
   colorHex: string;
   quantity: number;
   image: string;
+  variantId?: string;
 }
 
 interface CartState {
@@ -39,56 +40,55 @@ export const useCartStore = create<CartState>()(
         try {
           const api = require('../services/api').default;
           const currentStore = useStoreStore.getState().currentStore;
-          // In a real app we'd map this to a variantId. For now, pass what we have.
-          const res = await api.post('/cart/items', {
+          
+          const payload = {
             storeId: currentStore?.id,
             productId: newItem.productId,
+            variantId: newItem.variantId,
             quantity: newItem.quantity,
-            // Assuming the backend can handle size/color if variantId is missing, or we just rely on local state grouping for now if backend cart isn't strict.
-          });
+          };
+          
+          console.log('=== ADD TO CART REQUEST ===');
+          console.log('URL: POST /cart/items');
+          console.log('Headers (Authorization exists?):', !!api.defaults.headers.common['Authorization'] || 'Will be set by interceptor');
+          console.log('Payload:', JSON.stringify(payload, null, 2));
+
+          const res = await api.post('/cart/items', payload);
           
           if (res.data.success) {
-            set((state) => {
-              const uniqueId = `${newItem.productId}-${newItem.size}-${newItem.colorName}`;
-              const existingItemIndex = state.items.findIndex((item) => item.id === uniqueId);
-              
-              if (existingItemIndex >= 0) {
-                const newItems = [...state.items];
-                newItems[existingItemIndex].quantity += newItem.quantity;
-                return { items: newItems };
-              } else {
-                return { items: [...state.items, { ...newItem, id: uniqueId }] };
-              }
-            });
+            await get().fetchCart();
             return { success: true };
           }
-          return { success: false, message: 'Failed to add to cart' };
-        } catch (error) {
-          console.error('Add to cart error', error);
-          return { success: false, message: 'Network error' };
+          return { success: false, message: res.data.message || 'Failed to add to cart' };
+        } catch (error: any) {
+          console.warn('=== ADD TO CART ERROR ===');
+          console.warn('Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+          console.warn('Error Message:', error.message);
+          
+          const errorMsg = error.response?.data?.message || error.message || 'Network error';
+          return { success: false, message: errorMsg };
         }
       },
       removeFromCart: async (id) => {
         try {
+          // Optimistic update for UI animations
+          set((state) => ({ items: state.items.filter((item) => item.id !== id) }));
           const api = require('../services/api').default;
           await api.delete(`/cart/items/${id}`);
-          set((state) => ({
-            items: state.items.filter((item) => item.id !== id),
-          }));
         } catch (error) {
           console.error('Remove from cart error', error);
+          // Revert on error
+          await get().fetchCart();
         }
       },
       updateQuantity: async (id, delta) => {
         try {
-          const api = require('../services/api').default;
-          // Fire update to backend (optimistic or wait, let's wait)
           const state = get();
           const item = state.items.find(i => i.id === id);
           if (!item) return;
           const newQty = Math.max(1, item.quantity + delta);
           
-          await api.patch(`/cart/items/${id}`, { quantity: newQty });
+          // Optimistic update
           set((state) => ({
             items: state.items.map((item) => {
               if (item.id === id) {
@@ -97,8 +97,13 @@ export const useCartStore = create<CartState>()(
               return item;
             }),
           }));
+
+          const api = require('../services/api').default;
+          await api.patch(`/cart/items/${id}`, { quantity: newQty });
         } catch (error) {
           console.error('Update quantity error', error);
+          // Revert on error
+          await get().fetchCart();
         }
       },
       applyCoupon: async (code) => {
@@ -123,11 +128,15 @@ export const useCartStore = create<CartState>()(
       removeCoupon: () => set({ couponCode: null, discountAmount: 0 }),
       clearCart: async () => {
         try {
-          const api = require('../services/api').default;
-          await api.delete('/cart');
+          // Optimistic update
           set({ items: [], couponCode: null, discountAmount: 0 });
+          const api = require('../services/api').default;
+          const storeId = require('./storeStore').useStoreStore.getState().currentStore?.id;
+          const url = storeId ? `/cart?storeId=${storeId}` : '/cart';
+          await api.delete(url);
         } catch (error) {
           console.error('Clear cart error', error);
+          await get().fetchCart();
         }
       },
       getCartTotal: () => {
@@ -137,13 +146,22 @@ export const useCartStore = create<CartState>()(
       fetchCart: async () => {
         try {
           const api = require('../services/api').default;
-          const res = await api.get('/cart');
+          const storeId = require('./storeStore').useStoreStore.getState().currentStore?.id;
+          const url = storeId ? `/cart?storeId=${storeId}` : '/cart';
+          const res = await api.get(url);
           if (res.data.success && res.data.data.items) {
-            // Transform backend cart items to local format if needed. 
-            // For now, assuming backend matches or we use what we have locally since it's just a PoC migration.
-            // If the backend returns empty or we want to trust local state until full backend implementation, we can merge.
-            // We'll set items to whatever backend returns if it matches our schema.
-            set({ items: res.data.data.items || [] });
+            const mappedItems = res.data.data.items.map((item: any) => ({
+              id: item.id,
+              productId: item.product?.id || '',
+              name: item.product?.name || 'Unknown',
+              price: Number(item.product?.price) || 0,
+              size: item.variant?.size || 'M',
+              colorName: item.variant?.color || 'Default',
+              colorHex: item.variant?.colorHex || '#000000',
+              quantity: item.quantity,
+              image: item.product?.thumbnail || item.product?.images?.[0] || 'https://via.placeholder.com/150',
+            }));
+            set({ items: mappedItems });
           }
         } catch (error) {
           console.error('Fetch cart error', error);

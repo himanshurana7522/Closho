@@ -16,7 +16,7 @@ interface AuthStore extends AuthState {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ user, token, isAuthenticated: true, error: null });
         } catch (error) {
-          console.error('Error saving auth state', error);
+          console.warn('Error saving auth state', error);
           set({ error: 'Failed to save auth state' });
         }
       },
@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthStore>()(
         try {
           // Import here to avoid circular dependencies if needed, or import at top
           const api = require('../services/api').default;
-          const response = await api.post('/auth/login', { emailOrPhone, password });
+          const response = await api.post('/auth/login', { email: emailOrPhone, password });
           if (response.data.success) {
             const { user, accessToken } = response.data.data;
             set({ user, token: accessToken, isAuthenticated: true, error: null, isLoading: false });
@@ -47,8 +47,8 @@ export const useAuthStore = create<AuthStore>()(
             return { success: false, error: response.data.message };
           }
         } catch (error: any) {
-          console.error('Login error', error);
-          const errorMsg = error.response?.data?.message || 'Network error. Please try again.';
+          console.warn('Login error', error.message || error);
+          const errorMsg = error.response?.data?.message || error.message || 'Network error. Please try again.';
           set({ error: errorMsg, isLoading: false });
           return { success: false, error: errorMsg };
         }
@@ -67,8 +67,8 @@ export const useAuthStore = create<AuthStore>()(
             return { success: false, error: response.data.message };
           }
         } catch (error: any) {
-          console.error('Register error', error);
-          const errorMsg = error.response?.data?.message || 'Network error. Please try again.';
+          console.warn('Register error', error.message || error);
+          const errorMsg = error.response?.data?.message || error.message || 'Network error. Please try again.';
           set({ error: errorMsg, isLoading: false });
           return { success: false, error: errorMsg };
         }
@@ -77,17 +77,18 @@ export const useAuthStore = create<AuthStore>()(
       updateUser: async (userData: Partial<User>) => {
         try {
           const api = require('../services/api').default;
-          const res = await api.put('/user/profile', userData);
+          const res = await api.post('/user/profile', userData);
           if (res.data.success) {
-            set((state) => ({
-              user: state.user ? { ...state.user, ...userData } : null,
-            }));
+            const currentUser = get().user;
+            if (currentUser) {
+              set({ user: { ...currentUser, ...userData } });
+            }
             return { success: true };
           }
           return { success: false, message: res.data.message };
         } catch (error: any) {
-          console.error('Update profile error', error);
-          return { success: false, message: error.message };
+          console.warn('Update profile error', error.message || error);
+          return { success: false, message: error.response?.data?.message || error.message };
         }
       },
 
@@ -98,8 +99,8 @@ export const useAuthStore = create<AuthStore>()(
           if (response.data.success && response.data.data) {
             set({ user: response.data.data });
           }
-        } catch (error) {
-          console.error('Fetch profile error', error);
+        } catch (error: any) {
+          console.warn('Fetch profile error', error.message || error);
         }
       },
 
@@ -108,8 +109,8 @@ export const useAuthStore = create<AuthStore>()(
           const api = require('../services/api').default;
           await api.post('/auth/logout').catch(() => {}); // Ignore logout errors
           set({ user: null, token: null, isAuthenticated: false, error: null });
-        } catch (error) {
-          console.error('Error during logout', error);
+        } catch (error: any) {
+          console.warn('Error during logout', error.message || error);
         }
       },
 

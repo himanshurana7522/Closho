@@ -39,7 +39,10 @@ export default function ProductDetailsScreen() {
       try {
         const api = require('../../src/services/api').default;
         const storeIdParam = currentStore ? `?storeId=${currentStore.id}` : '';
-        const response = await api.get(`/products/${id}${storeIdParam}`);
+        const url = `/products/${id}${storeIdParam}`;
+        console.log(`=== PRODUCT DETAILS REQUEST === URL: ${url}`);
+        const response = await api.get(url);
+        console.log(`=== PRODUCT DETAILS RESPONSE ===`, JSON.stringify(response.data, null, 2));
         
         if (response.data.success) {
           const p = response.data.data;
@@ -65,6 +68,7 @@ export default function ProductDetailsScreen() {
               })) : [{ id: 'c1', name: 'Default', hex: '#000000' }],
             sizes: p.variants ? 
               Array.from(new Set(p.variants.map((v: any) => String(v.size)))) : ['M'],
+            rawVariants: p.variants || [],
           };
           
           setProduct(formatted);
@@ -238,11 +242,18 @@ export default function ProductDetailsScreen() {
           title="Buy Now" 
           variant="outline" 
           style={styles.checkoutBtn} 
-          onPress={() => {
+          onPress={async () => {
             Haptics.impactAsync();
             const colorObj = product.colors.find((c: any) => c.id === selectedColor);
-            addToCart({
+            
+            // Find matching variantId from raw variants
+            const matchingVariant = product.rawVariants?.find((v: any) => v.color === selectedColor && String(v.size) === String(selectedSize));
+            const variantId = matchingVariant?.id;
+            
+            showSnackbar('Adding to Cart...', 'info');
+            const result = await addToCart({
               productId: product.id,
+              variantId: variantId,
               name: product.name,
               price: product.price,
               size: selectedSize,
@@ -251,8 +262,13 @@ export default function ProductDetailsScreen() {
               quantity: 1,
               image: product.imageUrl,
             });
-            showSnackbar('Added to Cart! Redirecting...', 'success');
-            router.push('/(tabs)/cart');
+            
+            if (result.success) {
+              showSnackbar('Added to Cart! Redirecting...', 'success');
+              router.push('/(tabs)/cart');
+            } else {
+              showSnackbar(result.message || 'Failed to add to cart', 'error');
+            }
           }}
         />
         <Button 
@@ -261,8 +277,14 @@ export default function ProductDetailsScreen() {
           onPress={async () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             const colorObj = product.colors.find((c: any) => c.id === selectedColor);
-            await addToCart({
+            
+            // Find matching variantId from raw variants
+            const matchingVariant = product.rawVariants?.find((v: any) => v.color === selectedColor && String(v.size) === String(selectedSize));
+            const variantId = matchingVariant?.id;
+            
+            const result = await addToCart({
               productId: product.id,
+              variantId: variantId,
               name: product.name,
               price: product.price,
               size: selectedSize,
@@ -271,7 +293,12 @@ export default function ProductDetailsScreen() {
               quantity: 1,
               image: product.imageUrl,
             });
-            showSnackbar('Added to Cart', 'success');
+            
+            if (result.success) {
+              showSnackbar('Added to Cart', 'success');
+            } else {
+              showSnackbar(result.message || 'Failed to add to cart', 'error');
+            }
           }}
         />
       </View>

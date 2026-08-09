@@ -46,7 +46,9 @@ export default function HomeScreen() {
       try {
         // As per request, try /products first without any storeId to prevent zero products
         const url = `/products?limit=14`;
+        console.log(`=== PRODUCTS LIST REQUEST (HOME) === URL: ${url}`);
         const res = await api.get(url);
+        console.log(`=== PRODUCTS LIST RESPONSE (HOME) ===`, JSON.stringify(res.data, null, 2));
         if (res.data) {
           const responseData = res.data.data !== undefined ? res.data.data : res.data;
           const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
@@ -191,7 +193,13 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-          <TouchableOpacity style={styles.reelCard} onPress={() => Haptics.impactAsync()}>
+          <TouchableOpacity 
+            style={styles.reelCard} 
+            onPress={() => {
+              Haptics.impactAsync();
+              router.push('/reels?index=0');
+            }}
+          >
             <Video
               style={styles.reelVideo}
               source={{ uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' }}
@@ -207,7 +215,13 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.reelTitle} numberOfLines={2}>Summer Styling Tips</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.reelCard} onPress={() => Haptics.impactAsync()}>
+          <TouchableOpacity 
+            style={styles.reelCard} 
+            onPress={() => {
+              Haptics.impactAsync();
+              router.push('/reels?index=1');
+            }}
+          >
             <Video
               style={styles.reelVideo}
               source={{ uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' }}

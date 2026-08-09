@@ -43,7 +43,9 @@ export default function ExploreScreen() {
       if (activeSort === 'Newest Arrivals') sortParam = 'newest';
       query += `&sort=${sortParam}`;
 
+      console.log(`=== PRODUCTS LIST REQUEST (EXPLORE) === URL: ${query}`);
       const response = await api.get(query);
+      console.log(`=== PRODUCTS LIST RESPONSE (EXPLORE) ===`, JSON.stringify(response.data, null, 2));
       if (response.data) {
         const responseData = response.data.data !== undefined ? response.data.data : response.data;
         const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
