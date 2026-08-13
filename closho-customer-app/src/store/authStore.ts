@@ -14,6 +14,32 @@ interface AuthStore extends AuthState {
   setError: (error: string | null) => void;
 }
 
+const safeStorage = {
+  getItem: async (name: string) => {
+    try {
+      console.log(`[App Startup] Reading storage key: ${name}`);
+      return await AsyncStorage.getItem(name);
+    } catch (err) {
+      console.error('[App Startup] FATAL ERROR reading from storage:', err);
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string) => {
+    try {
+      await AsyncStorage.setItem(name, value);
+    } catch (err) {
+      console.error('[App Startup] FATAL ERROR writing to storage:', err);
+    }
+  },
+  removeItem: async (name: string) => {
+    try {
+      await AsyncStorage.removeItem(name);
+    } catch (err) {
+      console.error('[App Startup] FATAL ERROR removing from storage:', err);
+    }
+  },
+};
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -119,7 +145,10 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => safeStorage),
+      onRehydrateStorage: () => (state) => {
+        console.log('[App Startup] Zustand hydration complete. Auth state:', state?.isAuthenticated);
+      },
     }
   )
 );
