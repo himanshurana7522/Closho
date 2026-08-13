@@ -38,8 +38,7 @@
       "expo-secure-store"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "updates": {
       "url": "https://u.expo.dev/ba12a1fb-1eae-4c46-bd89-d14440f7fb3f"
