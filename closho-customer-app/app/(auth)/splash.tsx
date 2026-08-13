@@ -14,6 +14,11 @@ export default function SplashScreen() {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
+    // Hide the native splash screen now that our custom one is mounted
+    import('expo-splash-screen').then(SplashScreen => {
+      SplashScreen.hideAsync().catch(() => {});
+    });
+
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, tension: 15, friction: 8, useNativeDriver: true })

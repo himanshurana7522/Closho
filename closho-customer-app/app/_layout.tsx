@@ -5,6 +5,11 @@ import { useAuthStore } from '../src/store/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../src/types/auth.types';
 import { SnackbarProvider } from '../src/components/ui/SnackbarContext';
+import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient();
 
@@ -43,10 +48,12 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SnackbarProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </SnackbarProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <SnackbarProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </SnackbarProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
