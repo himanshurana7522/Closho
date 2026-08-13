@@ -40,6 +40,7 @@
     "experiments": {
       "typedRoutes": true
     },
+    "newArchEnabled": false,
     "updates": {
       "url": "https://u.expo.dev/ba12a1fb-1eae-4c46-bd89-d14440f7fb3f"
     },
