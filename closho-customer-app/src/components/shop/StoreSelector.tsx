@@ -7,21 +7,17 @@ import { spacing } from '../../theme/spacing';
 import * as Haptics from 'expo-haptics';
 import { useSnackbar } from '../ui/SnackbarContext';
 
-const mockStores = [
-  { id: '1', name: 'Closho Andheri', address: '123 Main St, Andheri West', distance: '1.2 km' },
-  { id: '2', name: 'Closho Bandra', address: '45 Linking Road, Bandra West', distance: '3.5 km' },
-  { id: '3', name: 'Closho Juhu', address: '78 Juhu Tara Road', distance: '5.1 km' },
-];
+import { useStoreStore } from '../../store/storeStore';
+import { Store } from '../../types/store.types';
 
 export const StoreSelector = () => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedStore, setSelectedStore] = useState(mockStores[0]);
+  const { currentStore, availableStores, setCurrentStore, isSelectorOpen, setSelectorOpen } = useStoreStore();
   const { showSnackbar } = useSnackbar();
 
-  const handleSelectStore = (store: typeof mockStores[0]) => {
+  const handleSelectStore = (store: Store) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedStore(store);
-    setModalVisible(false);
+    setCurrentStore(store);
+    setSelectorOpen(false);
     showSnackbar(`Switched to ${store.name}`, 'success');
   };
 
@@ -32,7 +28,7 @@ export const StoreSelector = () => {
         activeOpacity={0.7} 
         onPress={() => {
           Haptics.selectionAsync();
-          setModalVisible(true);
+          setSelectorOpen(true);
         }}
       >
         <View style={styles.iconContainer}>
@@ -40,52 +36,57 @@ export const StoreSelector = () => {
         </View>
         <View style={styles.storeInfo}>
           <Text style={styles.storeLabel}>Delivering to</Text>
-          <Text style={styles.storeName} numberOfLines={1}>{selectedStore.name}</Text>
+          <Text style={styles.storeName} numberOfLines={1}>{currentStore ? currentStore.name : 'Select a store'}</Text>
         </View>
         <Ionicons name="chevron-down" size={16} color={colors.text.secondary} />
       </TouchableOpacity>
 
       <Modal
-        visible={modalVisible}
+        visible={isSelectorOpen}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => setSelectorOpen(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Store</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+              <TouchableOpacity onPress={() => setSelectorOpen(false)} style={styles.closeBtn}>
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
             
             <FlatList
-              data={mockStores}
+              data={availableStores}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.listContainer}
+              ListEmptyComponent={
+                <Text style={{ textAlign: 'center', marginTop: 20, color: colors.text.secondary }}>
+                  No stores found nearby.
+                </Text>
+              }
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={[
                     styles.storeItem,
-                    selectedStore.id === item.id && styles.selectedStoreItem
+                    currentStore?.id === item.id && styles.selectedStoreItem
                   ]}
                   onPress={() => handleSelectStore(item)}
                 >
                   <View style={styles.storeItemLeft}>
                     <Ionicons 
-                      name={selectedStore.id === item.id ? "location" : "location-outline"} 
+                      name={currentStore?.id === item.id ? "location" : "location-outline"} 
                       size={24} 
-                      color={selectedStore.id === item.id ? colors.primary : colors.text.secondary} 
+                      color={currentStore?.id === item.id ? colors.primary : colors.text.secondary} 
                     />
                     <View style={styles.storeItemInfo}>
-                      <Text style={[styles.storeItemName, selectedStore.id === item.id && styles.selectedStoreText]}>
+                      <Text style={[styles.storeItemName, currentStore?.id === item.id && styles.selectedStoreText]}>
                         {item.name}
                       </Text>
-                      <Text style={styles.storeItemAddress}>{item.address}</Text>
+                      <Text style={styles.storeItemAddress}>{item.city}, {item.pincode}</Text>
                     </View>
                   </View>
-                  <Text style={styles.storeItemDistance}>{item.distance}</Text>
+                  <Text style={styles.storeItemDistance}>{item.deliveryRadiusKm ? `${item.deliveryRadiusKm} km` : ''}</Text>
                 </TouchableOpacity>
               )}
             />

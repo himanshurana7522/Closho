@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { colors } from '../../src/theme/colors';
@@ -8,51 +8,39 @@ import { spacing } from '../../src/theme/spacing';
 import * as Haptics from 'expo-haptics';
 import { Button } from '../../src/components/ui/Button';
 
-const MOCK_ORDER = {
-  id: 'ORD-89432',
-  date: '24 Jul 2026',
-  status: 'Shipped',
-  total: 169.99,
-  trackingNumber: 'TRK9982348123',
-  items: [
-    {
-      id: '1',
-      name: 'Classic Cotton Hoodie',
-      price: 65.00,
-      size: 'M',
-      colorName: 'Grey',
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=200&auto=format&fit=crop',
-    }
-  ],
-  timeline: [
-    { status: 'Order Placed', date: '24 Jul, 10:30 AM', completed: true },
-    { status: 'Processing', date: '24 Jul, 02:15 PM', completed: true },
-    { status: 'Shipped', date: '25 Jul, 09:00 AM', completed: true },
-    { status: 'Out for Delivery', date: 'Pending', completed: false },
-    { status: 'Delivered', date: 'Pending', completed: false },
-  ]
-};
+import api from '../../src/services/api';
 
 export default function OrderDetailsScreen() {
   const { id, orderData } = useLocalSearchParams();
   const router = useRouter();
-
-  const order = orderData ? JSON.parse(orderData as string) : MOCK_ORDER;
   
-  // If order is passed from previous screen, it might not have the full detail like timeline or items 
-  // since MOCK_ORDERS in orders.tsx is simplified. Let's merge it with MOCK_ORDER to ensure it renders without crashing.
-  const displayOrder = {
-    ...MOCK_ORDER,
-    ...order,
-    timeline: order.timeline || MOCK_ORDER.timeline,
-    items: order.items || MOCK_ORDER.items,
-  };
+  const [order, setOrder] = useState<any>(orderData ? JSON.parse(orderData as string) : null);
+  const [isLoading, setIsLoading] = useState(!orderData);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/orders/${id}`);
+        setOrder(response.data?.data?.order || response.data?.order || response.data);
+      } catch (err: any) {
+        console.warn('Failed to fetch order details:', err.message || err);
+        setError(err.message || 'Failed to load order');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchOrderDetails();
+  }, [id]);
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
+
+  const displayOrder = order;
 
   return (
     <View style={styles.container}>
@@ -64,7 +52,17 @@ export default function OrderDetailsScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {isLoading && !displayOrder ? (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error && !displayOrder ? (
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={{ color: colors.text.secondary, marginBottom: spacing.md }}>{error}</Text>
+          <Button title="Go Back" onPress={handleBack} />
+        </View>
+      ) : displayOrder ? (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Order Info */}
         <View style={styles.section}>
           <View style={styles.rowBetween}>
@@ -73,7 +71,7 @@ export default function OrderDetailsScreen() {
               <Text style={styles.statusText}>{displayOrder.status}</Text>
             </View>
           </View>
-          <Text style={styles.orderDate}>Placed on {displayOrder.date}</Text>
+          <Text style={styles.orderDate}>Placed on {displayOrder.date || new Date(displayOrder.createdAt).toLocaleDateString()}</Text>
           <View style={styles.trackingContainer}>
             <Text style={styles.trackingLabel}>Tracking Number:</Text>
             <Text style={styles.trackingNumber}>{displayOrder.trackingNumber || `TRK${Math.floor(Math.random() * 100000000)}`}</Text>
@@ -84,7 +82,7 @@ export default function OrderDetailsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Status</Text>
           <View style={styles.timeline}>
-            {displayOrder.timeline.map((step: any, index: number) => (
+            {displayOrder?.timeline?.map((step: any, index: number) => (
               <View key={index} style={styles.timelineStep}>
                 <View style={styles.timelineLeft}>
                   <View style={[styles.timelineDot, step.completed && styles.timelineDotActive]} />
@@ -106,14 +104,14 @@ export default function OrderDetailsScreen() {
         {/* Items */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Items Ordered</Text>
-          {displayOrder.items.map((item: any) => (
+          {displayOrder.items?.map((item: any) => (
             <View key={item.id} style={styles.itemCard}>
-              <Image source={{ uri: item.image || item.previewImage || MOCK_ORDER.items[0].image }} style={styles.itemImage} />
+              <Image source={{ uri: item.image || item.previewImage || 'https://via.placeholder.com/200' }} style={styles.itemImage} />
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{item.name || 'Product'}</Text>
                 <Text style={styles.itemVariant}>Size: {item.size || 'M'} | Color: {item.colorName || 'Default'}</Text>
                 <View style={styles.itemFooter}>
-                  <Text style={styles.itemPrice}>₹{item.price?.toFixed(2) || '0.00'}</Text>
+                  <Text style={styles.itemPrice}>₹{Number(item.price || 0).toFixed(2)}</Text>
                   <Text style={styles.itemQty}>Qty: {item.quantity || 1}</Text>
                 </View>
               </View>
@@ -121,6 +119,7 @@ export default function OrderDetailsScreen() {
           ))}
         </View>
       </ScrollView>
+      ) : null}
 
       <View style={styles.footer}>
         <Button 

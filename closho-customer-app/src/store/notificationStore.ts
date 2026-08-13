@@ -27,7 +27,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   fetchNotifications: async () => {
     set({ isLoading: true });
     try {
-      const res = await api.get('/notifications?page=1');
+      const res = await api.get('/notifications?page=1&limit=10');
       if (res.data.success) {
         set({ notifications: res.data.data, isLoading: false, error: null });
       } else {

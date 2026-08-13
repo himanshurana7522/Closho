@@ -58,6 +58,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="reels"
+        options={{
+          title: 'Reels',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="play-circle-outline" size={size + 4} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="cart"
         options={{
           title: 'Cart',

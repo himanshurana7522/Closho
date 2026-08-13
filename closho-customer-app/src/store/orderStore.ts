@@ -81,7 +81,7 @@ export const useOrderStore = create<OrderState>()(
             set({ error: response.data.message || 'Failed to fetch orders', isLoading: false });
           }
         } catch (error: any) {
-          console.error('Error fetching orders:', error);
+          console.warn('Error fetching orders:', error.message || error);
           set({ error: error.message || 'Failed to connect to server', isLoading: false });
         }
       },

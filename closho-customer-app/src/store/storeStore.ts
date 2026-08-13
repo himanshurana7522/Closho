@@ -4,13 +4,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface StoreState {
   currentStore: Store | null;
+  availableStores: Store[];
+  isSelectorOpen: boolean;
+  setSelectorOpen: (isOpen: boolean) => void;
   setCurrentStore: (store: Store) => Promise<void>;
   loadSavedStore: () => Promise<void>;
-  fetchNearestStore: (lat: number, lng: number) => Promise<void>;
+  fetchNearestStore: (lat: number, lng: number, radius?: number, autoSetCurrentStore?: boolean) => Promise<void>;
 }
 
 export const useStoreStore = create<StoreState>((set) => ({
   currentStore: null,
+  availableStores: [],
+  isSelectorOpen: false,
+  
+  setSelectorOpen: (isOpen: boolean) => set({ isSelectorOpen: isOpen }),
   
   setCurrentStore: async (store: Store) => {
     try {
@@ -32,17 +39,21 @@ export const useStoreStore = create<StoreState>((set) => ({
     }
   },
 
-  fetchNearestStore: async (lat: number, lng: number) => {
+  fetchNearestStore: async (lat: number, lng: number, radius: number = 10, autoSetCurrentStore: boolean = true) => {
     try {
       const api = require('../services/api').default;
-      const response = await api.get(`/stores/nearest?lat=${lat}&lng=${lng}&radius=10`);
+      const response = await api.get(`/stores/nearest?lat=${lat}&lng=${lng}&radius=${radius}`);
       const responseData = response.data.data;
       const storesArray = Array.isArray(responseData) ? responseData : responseData?.stores;
       
       if (response.data.success && storesArray && storesArray.length > 0) {
-        const store = storesArray[0];
-        await AsyncStorage.setItem('currentStore', JSON.stringify(store));
-        set({ currentStore: store });
+        if (autoSetCurrentStore) {
+          const store = storesArray[0];
+          await AsyncStorage.setItem('currentStore', JSON.stringify(store));
+          set({ currentStore: store, availableStores: storesArray });
+        } else {
+          set({ availableStores: storesArray });
+        }
       } else {
         // If no store is found, don't crash, just log softly
         console.log('No nearby store found, falling back to all products.');

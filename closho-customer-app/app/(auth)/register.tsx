@@ -138,11 +138,11 @@ export default function RegisterScreen() {
             style={{ marginBottom: spacing.md }} 
             onPress={() => {}}
           />
-          <Button 
+          {/* <Button 
             title="Continue with Apple" 
             variant="outline" 
             onPress={() => {}}
-          />
+          /> */}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>

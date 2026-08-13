@@ -53,9 +53,11 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <View style={[styles.container, styles.emptyContainer]}>
-        <Ionicons name="cart-outline" size={80} color={colors.text.tertiary} />
-        <Text style={styles.emptyTitle}>Your cart is empty</Text>
-        <Text style={styles.emptySubtitle}>Looks like you haven't added anything yet.</Text>
+        <View style={styles.emptyIconCircle}>
+          <Ionicons name="cart" size={60} color={colors.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>Your cart is empty!</Text>
+        <Text style={styles.emptySubtitle}>Explore our wide range of products and find your next favorite outfit.</Text>
         <Button 
           title="Start Shopping" 
           onPress={() => router.push('/(tabs)')} 
@@ -180,19 +182,31 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: typography.fontSize.xl,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: colors.text.primary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xs,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   emptySubtitle: {
     fontSize: typography.fontSize.md,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xxxl,
+    lineHeight: 24,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   shopBtn: {
     width: '100%',
+    maxWidth: 300,
   },
   scrollContent: {
     padding: spacing.md,

@@ -76,7 +76,7 @@ export const useCartStore = create<CartState>()(
           const api = require('../services/api').default;
           await api.delete(`/cart/items/${id}`);
         } catch (error) {
-          console.error('Remove from cart error', error);
+          console.warn('Remove from cart error', error);
           // Revert on error
           await get().fetchCart();
         }
@@ -101,7 +101,7 @@ export const useCartStore = create<CartState>()(
           const api = require('../services/api').default;
           await api.patch(`/cart/items/${id}`, { quantity: newQty });
         } catch (error) {
-          console.error('Update quantity error', error);
+          console.warn('Update quantity error', error);
           // Revert on error
           await get().fetchCart();
         }
@@ -109,18 +109,18 @@ export const useCartStore = create<CartState>()(
       applyCoupon: async (code) => {
         try {
           const api = require('../services/api').default;
-          const res = await api.post('/cart/apply-coupon', { code });
+          const storeId = require('./storeStore').useStoreStore.getState().currentStore?.id;
+          const payload = storeId ? { code, storeId } : { code };
+          const res = await api.post('/cart/apply-coupon', payload);
           if (res.data.success) {
-            // Mock backend discount logic for now since we don't know the exact response shape
-            // The contract says it returns success: true. We'll extract discount amount if available, else hardcode for UI.
-            const discount = res.data.data?.discountAmount || 50; 
+            const discount = res.data.data?.discountAmount || 0; 
             set({ couponCode: code.toUpperCase(), discountAmount: discount });
             return { success: true, message: 'Coupon applied successfully!' };
           } else {
             return { success: false, message: res.data.message || 'Invalid coupon.' };
           }
         } catch (error: any) {
-          console.error('Apply coupon error', error);
+          console.warn('Apply coupon error', error?.message || error);
           const errorMsg = error.response?.data?.message || 'Failed to apply coupon.';
           return { success: false, message: errorMsg };
         }
@@ -135,7 +135,7 @@ export const useCartStore = create<CartState>()(
           const url = storeId ? `/cart?storeId=${storeId}` : '/cart';
           await api.delete(url);
         } catch (error) {
-          console.error('Clear cart error', error);
+          console.warn('Clear cart error', error);
           await get().fetchCart();
         }
       },
@@ -164,7 +164,7 @@ export const useCartStore = create<CartState>()(
             set({ items: mappedItems });
           }
         } catch (error) {
-          console.error('Fetch cart error', error);
+          console.warn('Fetch cart error', error);
         }
       }
     }),

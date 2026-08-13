@@ -1,26 +1,45 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
 import { spacing } from '../../src/theme/spacing';
 import { ProductCard, Product } from '../../src/components/product/ProductCard';
 import { Button } from '../../src/components/ui/Button';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSnackbar } from '../../src/components/ui/SnackbarContext';
-import { MOCK_PRODUCTS } from '../../src/data/mockProducts';
+import { useCategoryStore } from '../../src/store/categoryStore';
+import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
 
 export default function ExploreScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSort, setActiveSort] = useState('Recommended');
   const { showSnackbar } = useSnackbar();
+  
+  const parentId = (params.parentId as string) || null;
+  const categoryName = (params.categoryName as string) || 'All Products';
+  
+  const { fetchSubCategories, fetchTopCategories, getAllCategoriesForParent, isLoadingCategories } = useCategoryStore();
+  const displayCategories = getAllCategoriesForParent(parentId);
+
+  useEffect(() => {
+    if (parentId) {
+      fetchSubCategories(parentId);
+    } else {
+      fetchTopCategories();
+    }
+  }, [parentId]);
+
+  // Removed old params.category effect as activeCategory now tracks ID
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -35,7 +54,7 @@ export default function ExploreScreen() {
       // Build query string based on filters
       let query = `/products?page=1&limit=50`;
       if (searchQuery) query += `&search=${encodeURIComponent(searchQuery)}`;
-      if (activeCategory) query += `&category=${activeCategory.toLowerCase()}`;
+      if (activeCategory) query += `&category=${encodeURIComponent(activeCategory)}`;
       
       let sortParam = 'recommended';
       if (activeSort === 'Price: Low to High') sortParam = 'price_asc';
@@ -92,6 +111,12 @@ export default function ExploreScreen() {
     showSnackbar('Filters applied', 'success');
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchProducts();
+    setRefreshing(false);
+  }, [searchQuery, activeCategory, activeSort]);
+
   return (
     <View style={styles.container}>
       {/* Search Header */}
@@ -124,16 +149,43 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      <Animated.ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} style={{ opacity: fadeAnim }}>
+      <Animated.ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false} 
+        style={{ opacity: fadeAnim }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        
+        {/* Dynamic Category Chips */}
+        {displayCategories.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.exploreChipsContainer}>
+            {displayCategories.map(cat => (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.exploreChip, activeCategory === cat.id && styles.exploreChipActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setActiveCategory(activeCategory === cat.id ? null : cat.id);
+                }}
+              >
+                <Text style={[styles.exploreChipText, activeCategory === cat.id && styles.exploreChipTextActive]}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>All Products</Text>
+          <Text style={styles.sectionTitle}>{categoryName}</Text>
           <Text style={styles.resultsCount}>{products.length} results</Text>
         </View>
 
         {isLoading ? (
-          <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ color: colors.text.secondary, marginTop: spacing.md }}>Loading...</Text>
+          <View style={{ paddingHorizontal: spacing.sm, marginTop: spacing.md }}>
+            <ProductGridSkeleton count={6} />
           </View>
         ) : products.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
@@ -168,16 +220,16 @@ export default function ExploreScreen() {
             <ScrollView style={styles.filterScroll}>
               <Text style={styles.filterSectionTitle}>Categories</Text>
               <View style={styles.filterChips}>
-                {['Men', 'Women', 'Footwear', 'Accessories'].map(cat => (
+                {displayCategories.map(cat => (
                   <TouchableOpacity 
-                    key={cat} 
-                    style={[styles.filterChip, activeCategory === cat && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
+                    key={cat.id} 
+                    style={[styles.filterChip, activeCategory === cat.id && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
                     onPress={() => {
                       Haptics.selectionAsync();
-                      setActiveCategory(activeCategory === cat ? null : cat);
+                      setActiveCategory(activeCategory === cat.id ? null : cat.id);
                     }}
                   >
-                    <Text style={[styles.filterChipText, activeCategory === cat && { color: colors.primary, fontWeight: 'bold' }]}>{cat}</Text>
+                    <Text style={[styles.filterChipText, activeCategory === cat.id && { color: colors.primary, fontWeight: 'bold' }]}>{cat.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -397,5 +449,32 @@ const styles = StyleSheet.create({
   },
   applyBtn: {
     flex: 2,
+  },
+  exploreChipsContainer: {
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  exploreChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    marginRight: spacing.sm,
+  },
+  exploreChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  exploreChipText: {
+    color: colors.text.secondary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '500',
+  },
+  exploreChipTextActive: {
+    color: colors.text.inverse,
+    fontWeight: 'bold',
   },
 });

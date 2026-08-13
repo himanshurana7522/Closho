@@ -9,6 +9,7 @@ import { useSnackbar } from '../../src/components/ui/SnackbarContext';
 import { useOrderStore } from '../../src/store/orderStore';
 import { useCallback } from 'react';
 import { ActivityIndicator } from 'react-native';
+import { Button } from '../../src/components/ui/Button';
 
 const TABS = ['All', 'Ordered', 'Shipped', 'Delivered', 'Cancelled'];
 
@@ -36,7 +37,9 @@ export default function OrdersScreen() {
   };
 
   const handleAction = (actionName: string, order: any) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (actionName === 'View Order' || actionName === 'Track Order' || actionName === 'View Details') {
       router.push({
         pathname: `/order/[id]`,
@@ -75,8 +78,17 @@ export default function OrdersScreen() {
         {isLoading ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xxxl }} />
         ) : orders.length === 0 ? (
-          <View style={{ alignItems: 'center', marginTop: spacing.xxxl }}>
-            <Text style={{ color: colors.text.secondary, fontSize: typography.fontSize.lg }}>No orders found.</Text>
+          <View style={[styles.emptyContainer]}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="cube-outline" size={60} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>No Orders Yet</Text>
+            <Text style={styles.emptySubtitle}>You haven't placed any orders. Start exploring to find something you'll love!</Text>
+            <Button 
+              title="Browse Products" 
+              onPress={() => router.push('/(tabs)')} 
+              style={styles.shopBtn}
+            />
           </View>
         ) : (
           orders.filter(order => activeTab === 'All' || order.status.toLowerCase() === activeTab.toLowerCase()).map(order => (
@@ -102,7 +114,7 @@ export default function OrdersScreen() {
               <Image source={{ uri: order.previewImage }} style={styles.previewImg} />
               <View style={styles.orderDetails}>
                 <Text style={styles.itemsCount}>{order.itemsCount} {order.itemsCount === 1 ? 'Item' : 'Items'}</Text>
-                <Text style={styles.orderTotal}>₹{order.total.toFixed(2)}</Text>
+                <Text style={styles.orderTotal}>₹{(order.total || 0).toFixed(2)}</Text>
               </View>
             </View>
             
@@ -125,6 +137,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xxxl * 2,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: '900',
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  emptySubtitle: {
+    fontSize: typography.fontSize.md,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xxl,
+    lineHeight: 24,
+  },
+  shopBtn: {
+    width: '100%',
+    maxWidth: 300,
   },
   headerTitle: {
     fontSize: typography.fontSize.xxl,

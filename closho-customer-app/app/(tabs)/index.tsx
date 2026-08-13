@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -8,22 +8,21 @@ import { ProductCard, Product } from '../../src/components/product/ProductCard';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Video, ResizeMode } from 'expo-av';
+import * as Location from 'expo-location';
 import { useStoreStore } from '../../src/store/storeStore';
+import { useCategoryStore } from '../../src/store/categoryStore';
+import { useReelsStore } from '../../src/store/reelsStore';
 import api from '../../src/services/api';
-
-const CATEGORIES = [
-  { id: '1', name: 'T-Shirt', icon: 'shirt-outline' },
-  { id: '2', name: 'Pants', icon: 'server-outline' },
-  { id: '3', name: 'Jacket', icon: 'body-outline' },
-  { id: '4', name: 'Cap', icon: 'glasses-outline' },
-  { id: '5', name: 'Shoes', icon: 'footsteps-outline' },
-];
+import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { currentStore, fetchNearestStore } = useStoreStore();
+  const { topCategories, fetchTopCategories, isLoadingCategories } = useCategoryStore();
+  const { reels, fetchReels } = useReelsStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Subtle entrance animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -34,50 +33,85 @@ export default function HomeScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true })
     ]).start();
+    
+    // Fetch top-level categories and reels
+    fetchTopCategories();
+    fetchReels();
 
-    // Fetch nearest store if not available (mock coords for Mumbai)
-    if (!currentStore) {
-      fetchNearestStore(19.1197, 72.8468);
-    }
-  }, [currentStore]);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
+    const initLocationAndStores = async () => {
+      if (currentStore) return;
+      
       try {
-        // As per request, try /products first without any storeId to prevent zero products
-        const url = `/products?limit=14`;
-        console.log(`=== PRODUCTS LIST REQUEST (HOME) === URL: ${url}`);
-        const res = await api.get(url);
-        console.log(`=== PRODUCTS LIST RESPONSE (HOME) ===`, JSON.stringify(res.data, null, 2));
-        if (res.data) {
-          const responseData = res.data.data !== undefined ? res.data.data : res.data;
-          const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
-          
-          if (Array.isArray(productsArray) && productsArray.length > 0) {
-            // Normalize prices from string to number and handle null images
-            const formattedProducts = productsArray.map((p: any) => ({
-              ...p,
-              price: Number(p.price) || 0,
-              originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-              imageUrl: p.thumbnail || p.images?.[0] || 'https://via.placeholder.com/400x500?text=No+Image',
-            }));
-            setProducts(formattedProducts);
-          } else {
-            console.log('Products array is empty or invalid:', productsArray);
-          }
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Location permission denied, fetching default stores');
+          // Fallback: pass large radius and default coords (Mumbai) to get a list of stores without auto-setting
+          await fetchNearestStore(19.1197, 72.8468, 99999, false);
+          useStoreStore.getState().setSelectorOpen(true);
+          return;
         }
-      } catch (err: any) {
-        console.error('Failed to fetch home products:', err?.message || err);
-        if (err?.response) console.error('Response data:', err.response.data);
-      } finally {
-        setIsLoading(false);
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        
+        await fetchNearestStore(location.coords.latitude, location.coords.longitude, 15);
+      } catch (error) {
+        console.warn('Error getting location', error);
+        await fetchNearestStore(19.1197, 72.8468, 99999);
       }
     };
+    initLocationAndStores();
+  }, [currentStore]);
+
+  const fetchProducts = async () => {
+    try {
+      const url = `/products?limit=14`;
+      const res = await api.get(url);
+      if (res.data) {
+        const responseData = res.data.data !== undefined ? res.data.data : res.data;
+        const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
+        
+        if (Array.isArray(productsArray) && productsArray.length > 0) {
+          const formattedProducts = productsArray.map((p: any) => ({
+            ...p,
+            price: Number(p.price) || 0,
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            imageUrl: p.thumbnail || p.images?.[0] || 'https://via.placeholder.com/400x500?text=No+Image',
+          }));
+          setProducts(formattedProducts);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch home products:', err?.message || err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, [currentStore]);
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchTopCategories(),
+      fetchReels(),
+      fetchProducts()
+    ]);
+    setRefreshing(false);
+  }, []);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.scrollContent} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+      }
+    >
       
       {/* ── HEADER ── */}
       <Animated.View style={[styles.topHeader, { opacity: fadeAnim }]}>
@@ -139,22 +173,39 @@ export default function HomeScreen() {
 
       {/* Categories */}
       <Animated.ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.categoriesContainer, { opacity: fadeAnim }]}>
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity 
-            key={cat.id} 
-            style={styles.categoryItem} 
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.selectionAsync();
-              router.push('/(tabs)/explore');
-            }}
-          >
-            <View style={styles.categoryIconCircle}>
-              <Ionicons name={cat.icon as any} size={24} color={colors.text.primary} />
-            </View>
-            <Text style={styles.categoryName}>{cat.name}</Text>
-          </TouchableOpacity>
-        ))}
+        {isLoadingCategories ? (
+          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.md }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : (
+          topCategories.map((cat) => {
+            // Provide a generic fallback icon if not explicitly handled
+            let iconName = 'list-outline';
+            if (cat.name.toLowerCase().includes('men')) iconName = 'man-outline';
+            if (cat.name.toLowerCase().includes('women')) iconName = 'woman-outline';
+            if (cat.name.toLowerCase().includes('kid')) iconName = 'happy-outline';
+            if (cat.name.toLowerCase().includes('shirt')) iconName = 'shirt-outline';
+            if (cat.name.toLowerCase().includes('shoe')) iconName = 'footsteps-outline';
+            if (cat.name.toLowerCase().includes('pant')) iconName = 'server-outline';
+
+            return (
+              <TouchableOpacity 
+                key={cat.id} 
+                style={styles.categoryItem} 
+                activeOpacity={0.7}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({ pathname: '/(tabs)/explore', params: { parentId: cat.id, categoryName: cat.name } });
+                }}
+              >
+                <View style={styles.categoryIconCircle}>
+                  <Ionicons name={iconName as any} size={24} color={colors.text.primary} />
+                </View>
+                <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </Animated.ScrollView>
 
       {/* Most Loved Section */}
@@ -182,63 +233,42 @@ export default function HomeScreen() {
       </Animated.View>
 
       {/* Trending Reels (Thumbnail trigger) */}
-      <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim, marginBottom: spacing.xxxl }]}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.reelsTitleContainer}>
-            <Ionicons name="play-circle-outline" size={24} color={colors.primary} style={styles.reelsIcon} />
-            <Text style={styles.sectionTitle}>Trending Looks</Text>
+      {reels.length > 0 && (
+        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim, marginBottom: spacing.xxxl }]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.reelsTitleContainer}>
+              <Ionicons name="play-circle-outline" size={24} color={colors.primary} style={styles.reelsIcon} />
+              <Text style={styles.sectionTitle}>Trending Looks</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/reels')}>
+              <Text style={styles.seeAllText}>Explore</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-            <Text style={styles.seeAllText}>Explore</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-          <TouchableOpacity 
-            style={styles.reelCard} 
-            onPress={() => {
-              Haptics.impactAsync();
-              router.push('/reels?index=0');
-            }}
-          >
-            <Video
-              style={styles.reelVideo}
-              source={{ uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' }}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping
-              isMuted
-            />
-            <View style={styles.playIconContainer}>
-              <View style={styles.playIconBg}>
-                <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
-              </View>
-            </View>
-            <Text style={styles.reelTitle} numberOfLines={2}>Summer Styling Tips</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.reelCard} 
-            onPress={() => {
-              Haptics.impactAsync();
-              router.push('/reels?index=1');
-            }}
-          >
-            <Video
-              style={styles.reelVideo}
-              source={{ uri: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' }}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping
-              isMuted
-            />
-            <View style={styles.playIconContainer}>
-              <View style={styles.playIconBg}>
-                <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
-              </View>
-            </View>
-            <Text style={styles.reelTitle} numberOfLines={2}>New Shoe Drops</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </Animated.View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+            {reels.slice(0, 5).map((reel, index) => (
+              <TouchableOpacity 
+                key={reel.id}
+                style={styles.reelCard} 
+                onPress={() => {
+                  Haptics.impactAsync();
+                  router.push('/(tabs)/reels');
+                }}
+              >
+                <Image
+                  style={styles.reelVideo}
+                  source={{ uri: reel.thumbnail || reel.videoUrl }}
+                />
+                <View style={styles.playIconContainer}>
+                  <View style={styles.playIconBg}>
+                    <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
+                  </View>
+                </View>
+                <Text style={styles.reelTitle} numberOfLines={2}>{reel.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Animated.View>
+      )}
 
       {/* New Arrivals / Recommended */}
       <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
@@ -246,7 +276,9 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>New Arrivals</Text>
         </View>
         {isLoading ? (
-          <ActivityIndicator size="small" color={colors.primary} />
+          <View style={{ paddingHorizontal: spacing.sm }}>
+            <ProductGridSkeleton count={4} />
+          </View>
         ) : (
           <View style={styles.gridContainer}>
             {products.slice(6, 14).map(product => (

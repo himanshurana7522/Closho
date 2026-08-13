@@ -109,11 +109,11 @@ export default function LoginScreen() {
             style={{ marginBottom: spacing.md }}
             onPress={() => {}}
           />
-          <Button 
+          {/* <Button 
             title="Continue with Apple" 
             variant="secondary" 
             onPress={() => {}}
-          />
+          /> */}
         </Animated.View>
 
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
