@@ -30,6 +30,10 @@ export default function RootLayout() {
   // Guard routing
   useEffect(() => {
     if (isLoading) return;
+    
+    // Wait for segments to be fully populated by Expo Router before checking auth guards
+    // This prevents a race condition with index.tsx redirecting to splash
+    if (!segments || segments.length === 0) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isSplash = segments[1] === 'splash';
