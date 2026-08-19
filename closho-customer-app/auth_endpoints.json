@@ -1,0 +1,755 @@
+{
+  "name": "auth",
+  "item": [
+    {
+      "name": "CUSTOMER",
+      "item": [
+        {
+          "name": "OTP",
+          "item": [
+            {
+              "name": "reset password",
+              "item": [
+                {
+                  "name": "Set the New Password",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"resetToken\": \"eyJhbGciOiJIUzI1NiIsInR5...\",\r\n    \"newPassword\": \"MyNewSecurePassword123!\",\r\n    \"confirmPassword\": \"MyNewSecurePassword123!\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/auth/reset-password",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "reset-password"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Request a Password Reset OTP (via Email OR Phone)",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    // \"email\": \"groot707cod@gmail.com\"\r\n       \"phone\": \"8968630853\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/auth/forgot-password",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "forgot-password"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Submit the OTP for Verification",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"phone\": \"1234567899\",\r\n    \"otp\": \"123456\",\r\n    \"purpose\": \"password_reset\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/verify-otp",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-otp"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Request a Verification OTP",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    // \"email\": \"groot707cod@gmail.com\"\r\n    \"phone\": \"8968630853\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/send-verification-otp",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "send-verification-otp"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "// {\r\n//   \"email\": \"groot@test.com\",\r\n//   \"password\": \"Groot@123\"\r\n// }\r\n{\r\n    \"email\": \"jatin2@closho.com\",\r\n    \"password\": \"test123\",\r\n    \"fullName\": \"jatin\",\r\n    \"phone\": \"9878399995\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Tokens (Rotates Refresh Token)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"sessionId\": \"<SESSION_ID>\",\r\n  \"refreshToken\": \"<YOUR_REFRESH_TOKEN>\"\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout Specific Session (Via Body)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"sessionId\": \"<SESSION_ID>\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke Session (Via URL Param)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/sessions/<SESSION_ID>",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "sessions",
+                "<SESSION_ID>"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout from ALL Sessions",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout-all"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"emailOrPhone\": \"test@example.com\", \r\n    \"oldPassword\": \"password@123\",\r\n    \"newPassword\": \"password123\"\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Google Sign-In",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"idToken\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjI3YzQ1NTQ4NTU1NTYxOTYwZjQ5MWQ1MDYzOWU1NTY1N2IyMTJhYmMiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vY2xvc2hvIiwiYXVkIjoiY2xvc2hvIiwiYXV0aF90aW1lIjoxNzg2OTAwNDM0LCJ1c2VyX2lkIjoiRE1FYkUwbWU4U1RZYVFsNUFBM2thNnpYNW9MMiIsInN1YiI6IkRNRWJFMG1lOFNUWWFRbDVBQTNrYTZ6WDVvTDIiLCJpYXQiOjE3ODY5MDA0MzQsImV4cCI6MTc4NjkwNDAzNCwiZW1haWwiOiJncm9vdDcwN2NvZEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsiZ3Jvb3Q3MDdjb2RAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.WvGAFBwFKh0av0Ka8ppZKzQ3LEYWFnb_Lp_S2HJEEZTUMu1WDVnH8yQa_z63uaeDX0zHZSMCy4Q_8V9AXuwM2CR_cqM8kpc35IUs_cJKf0dG8kM9YqzDEtEiznmUYwae1Ps450s_KZaE68LW8nkDKOLPOph4WDBTdUMG2YfJfiibyNvXOkVb5RK6s9neDvnDkxLiEsVtVcZ4VcC9UO_sZXyFF3VLsIsHiplK71VWVn4VvVPmwUTMRFH374aacpOY-gXJOPYPz52AHuPG_bJpLjESsNr3QbSHElabaEktyszVOZwpq0xIVXT8lege3uq4sJ9uaUE67gZUWCTVtujrmw\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "google"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"phone\": \"9878399995\"\r\n}\r\n// http://localhost:3000\r\n//https://api-closho.onrender.com",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"user@example.com\",\r\n    \"otp\": \"123456\",\r\n    \"purpose\": \"password_reset\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password-delete",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"resetToken\": \"jwt_reset_token_from_verify_otp\",\r\n    \"newPassword\": \"newSecret456\",\r\n    \"confirmPassword\": \"newSecret456\"\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User / Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    // \"email\": \"test@example.com\",\r\n    // \"password\": \"password123\"\r\n    \"email\": \"groot707cod@gmail.com\",\r\n    \"password\": \"test123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request google for id - only for backend",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"\",\r\n    \"password\": \"\",\r\n    \"returnSecureToken\": true\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDp05jI04PEhrnDAY8BNMva3hgN7AuEp9M",
+              "protocol": "https",
+              "host": [
+                "identitytoolkit",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "accounts:signInWithPassword"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "AIzaSyDp05jI04PEhrnDAY8BNMva3hgN7AuEp9M"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ADMIN",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"groot@test.com\",\r\n  \"password\": \"Groot@123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"phone\": \"9999999999\", // Or \"email\": \"admin@closho.com\"\r\n    \"otp\": \"123456\", // Direct OTP\r\n    \"newPassword\": \"NewAdminPassword123!\",\r\n    \"confirmPassword\": \"NewAdminPassword123!\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"oldPassword\": \"CurrentPassword123\",\r\n  \"newPassword\": \"NewAdminPassword123!\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "View Admin Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"fullName\": \"Admin Closho\",\r\n  \"phone_no\": \"8968630853\"\r\n//   \"email\": \"admin@closho.com\",\r\n//   \"avatar\": \"https://s3.aws.com/.../new-avatar.png\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request for  OTP - forget password",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

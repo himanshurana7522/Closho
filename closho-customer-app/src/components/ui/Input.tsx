@@ -61,6 +61,7 @@ export const Input = ({ label, error, isPassword, style, onFocus, onBlur, ...res
           onFocus={handleFocus}
           onBlur={handleBlur}
           {...rest}
+          value={rest.value ?? ''}
         />
         {isPassword && (
           <TouchableOpacity 

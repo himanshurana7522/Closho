@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Animated, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { colors } from '../../src/theme/colors';
@@ -38,14 +39,14 @@ export default function ForgotPasswordScreen() {
 
   const onSubmit = async (data: ForgotForm) => {
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    const result = await useAuthStore.getState().sendPasswordResetOtp(data.email);
+    setIsLoading(false);
+
+    if (result.success) {
       showSnackbar('OTP sent to your email', 'success');
-      router.push('/(auth)/otp');
-    } catch (e) {
-      showSnackbar('Failed to send OTP. Try again.', 'error');
-    } finally {
-      setIsLoading(false);
+      router.push({ pathname: '/(auth)/otp-verification', params: { email: data.email } });
+    } else {
+      showSnackbar(result.error || 'Failed to send OTP. Try again.', 'error');
     }
   };
 
@@ -107,6 +108,12 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.xl,
+  },
+  content: {
+    flex: 1,
+  },
+  btn: {
+    marginTop: spacing.md,
   },
   nextBtn: {
     marginTop: spacing.md,

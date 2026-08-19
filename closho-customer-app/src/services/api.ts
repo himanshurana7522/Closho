@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 
 const api = axios.create({
-  baseURL: 'https://api-closho.onrender.com', // Using hardcoded URL per requirements
+  baseURL: env.API_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -37,11 +37,43 @@ api.interceptors.response.use(
       // Add a custom message for cold start timeout
       error.message = 'The server is taking longer than usual to respond. It might be waking up, please try again.';
     } else if (error.response?.status === 401) {
-      // Don't trigger logout loop if the 401 is from login/register/logout itself
-      const url = error.config?.url || '';
-      if (!url.includes('/auth/login') && !url.includes('/auth/register') && !url.includes('/auth/logout')) {
+      const originalRequest = error.config;
+      
+      // Don't trigger refresh loop if the 401 is from auth endpoints
+      const url = originalRequest?.url || '';
+      if (!url.includes('/auth/login') && !url.includes('/auth/register') && !url.includes('/auth/logout') && !url.includes('/auth/refresh') && !originalRequest._retry) {
+        
+        originalRequest._retry = true;
+        const { refreshToken, sessionId, logout } = useAuthStore.getState();
+
+        if (refreshToken && sessionId) {
+          try {
+            console.log('Attempting to refresh token...');
+            // Use a separate axios instance or basic fetch to avoid infinite loops
+            const refreshResponse = await axios.post(`${env.API_URL}/auth/refresh`, {
+              sessionId,
+              refreshToken
+            });
+
+            if (refreshResponse.data.success) {
+              const newAccessToken = refreshResponse.data.data.accessToken;
+              // Update state
+              useAuthStore.setState({ token: newAccessToken });
+              
+              // Retry original request
+              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+              return api(originalRequest);
+            }
+          } catch (refreshError) {
+            console.warn('Token refresh failed -> Forcing logout');
+            logout();
+            return Promise.reject(refreshError);
+          }
+        }
+        
+        // If we reach here, we had no refresh token, or the refresh failed
         console.warn('API 401 Unauthorized on:', url, '-> Forcing logout');
-        useAuthStore.getState().logout();
+        logout();
       }
     }
     return Promise.reject(error);

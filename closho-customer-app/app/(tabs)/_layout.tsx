@@ -9,6 +9,7 @@ export default function TabsLayout() {
   const { items } = useCartStore();
   return (
     <Tabs
+      initialRouteName="reels"
       screenOptions={{
         headerStyle: {
           backgroundColor: colors.background,
@@ -16,24 +17,16 @@ export default function TabsLayout() {
           borderBottomColor: colors.borderLight,
         },
         headerTintColor: colors.text.primary,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          backgroundColor: 'rgba(18, 18, 18, 0.9)', // Using matte black with slight transparency
-          borderTopWidth: 0,
-          borderRadius: 24,
-          height: 65,
-          paddingBottom: 8,
-          paddingTop: 8,
-          elevation: 10,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.5,
-          shadowRadius: 15,
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderTopColor: colors.borderLight,
+          height: 60,
+          paddingBottom: 10,
+          paddingTop: 10,
         },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.text.primary,
         tabBarInactiveTintColor: colors.text.tertiary,
         headerLeft: () => <StoreSelector />,
         headerTitle: '', // We use left component for store selector
@@ -43,8 +36,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={size + 2} color={color} />
           ),
         }}
       />
@@ -52,8 +45,8 @@ export default function TabsLayout() {
         name="explore"
         options={{
           title: 'Explore',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "search" : "search-outline"} size={size + 2} color={color} />
           ),
         }}
       />
@@ -62,8 +55,8 @@ export default function TabsLayout() {
         options={{
           title: 'Reels',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="play-circle-outline" size={size + 4} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "play-circle" : "play-circle-outline"} size={size + 6} color={color} />
           ),
         }}
       />
@@ -71,8 +64,8 @@ export default function TabsLayout() {
         name="cart"
         options={{
           title: 'Cart',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cart-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "cart" : "cart-outline"} size={size + 2} color={color} />
           ),
           tabBarBadge: items.length > 0 ? items.length : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.status.error },
@@ -82,8 +75,8 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="receipt-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "receipt" : "receipt-outline"} size={size + 2} color={color} />
           ),
         }}
       />
@@ -91,8 +84,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={size + 2} color={color} />
           ),
         }}
       />

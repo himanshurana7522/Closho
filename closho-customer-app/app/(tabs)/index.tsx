@@ -7,18 +7,17 @@ import { spacing } from '../../src/theme/spacing';
 import { ProductCard, Product } from '../../src/components/product/ProductCard';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Video, ResizeMode } from 'expo-av';
+
 import * as Location from 'expo-location';
 import { useStoreStore } from '../../src/store/storeStore';
-import { useCategoryStore } from '../../src/store/categoryStore';
 import { useReelsStore } from '../../src/store/reelsStore';
 import api from '../../src/services/api';
 import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { currentStore, fetchNearestStore } = useStoreStore();
-  const { topCategories, fetchTopCategories, isLoadingCategories } = useCategoryStore();
+  const { currentStore, availableStores, fetchAllStores, fetchNearestStore, setCurrentStore } = useStoreStore();
   const { reels, fetchReels } = useReelsStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,8 +33,8 @@ export default function HomeScreen() {
       Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true })
     ]).start();
     
-    // Fetch top-level categories and reels
-    fetchTopCategories();
+    // Fetch all stores and reels
+    fetchAllStores();
     fetchReels();
 
     const initLocationAndStores = async () => {
@@ -45,9 +44,7 @@ export default function HomeScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           console.log('Location permission denied, fetching default stores');
-          // Fallback: pass large radius and default coords (Mumbai) to get a list of stores without auto-setting
           await fetchNearestStore(19.1197, 72.8468, 99999, false);
-          useStoreStore.getState().setSelectorOpen(true);
           return;
         }
 
@@ -83,7 +80,7 @@ export default function HomeScreen() {
         }
       }
     } catch (err: any) {
-      console.error('Failed to fetch home products:', err?.message || err);
+      console.warn('Failed to fetch home products:', err?.message || err);
     } finally {
       setIsLoading(false);
     }
@@ -96,204 +93,209 @@ export default function HomeScreen() {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
-      fetchTopCategories(),
+      fetchAllStores(),
       fetchReels(),
       fetchProducts()
     ]);
     setRefreshing(false);
   }, []);
 
+  const handleSelectStore = async (store: any) => {
+    if (Platform.OS !== 'web') {
+      Haptics.selectionAsync();
+    }
+    await setCurrentStore(store);
+    router.push('/(tabs)/explore');
+  };
+
   return (
-    <ScrollView 
-      style={styles.container} 
-      contentContainerStyle={styles.scrollContent} 
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-      }
-    >
-      
-      {/* ── HEADER ── */}
-      <Animated.View style={[styles.topHeader, { opacity: fadeAnim }]}>
-
-        {/* LEFT: Row 1 = Logo | Row 2 = Store selector */}
-        <View style={styles.headerLeft}>
-          <Text style={styles.logoText}>CLOSHO</Text>
-          <TouchableOpacity
-            style={styles.locationRow}
-            activeOpacity={0.7}
-            onPress={() => Haptics.selectionAsync()}
-          >
-            <Text style={styles.deliveryLabel}>Delivering to </Text>
-            <Text style={styles.storeName}>{currentStore ? currentStore.name : 'Locating...'}</Text>
-            <Ionicons name="chevron-down" size={11} color={colors.primary} style={{ marginLeft: 2, marginTop: 1 }} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/notifications')}>
-            <Ionicons name="notifications-outline" size={22} color={colors.text.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
-            <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={15} color={colors.text.primary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-      </Animated.View>
-
-      {/* ── SEARCH BAR ── */}
-      <Animated.View style={[styles.searchContainer, { opacity: fadeAnim }]}>
-        <Ionicons name="search" size={18} color={colors.text.tertiary} style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search for clothes, shoes..."
-          placeholderTextColor={colors.text.tertiary}
-          style={styles.searchInput}
-          onFocus={() => router.push('/(tabs)/explore')}
-          editable={false}
-          pointerEvents="none"
-        />
-      </Animated.View>
-
-      {/* Banner */}
-      <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=800&auto=format&fit=crop' }} 
-          style={styles.bannerImage}
-        />
-        <View style={styles.bannerOverlay}>
-          <Text style={styles.bannerSub}>NEW COLLECTION</Text>
-          <Text style={styles.bannerTitle}>Wear it{'\n'}Today</Text>
-          <TouchableOpacity style={styles.bannerBtn} onPress={() => { Haptics.impactAsync(); router.push('/(tabs)/explore'); }}>
-            <Ionicons name="arrow-forward" size={18} color={colors.text.inverse} />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-
-      {/* Categories */}
-      <Animated.ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.categoriesContainer, { opacity: fadeAnim }]}>
-        {isLoadingCategories ? (
-          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.md }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        ) : (
-          topCategories.map((cat) => {
-            // Provide a generic fallback icon if not explicitly handled
-            let iconName = 'list-outline';
-            if (cat.name.toLowerCase().includes('men')) iconName = 'man-outline';
-            if (cat.name.toLowerCase().includes('women')) iconName = 'woman-outline';
-            if (cat.name.toLowerCase().includes('kid')) iconName = 'happy-outline';
-            if (cat.name.toLowerCase().includes('shirt')) iconName = 'shirt-outline';
-            if (cat.name.toLowerCase().includes('shoe')) iconName = 'footsteps-outline';
-            if (cat.name.toLowerCase().includes('pant')) iconName = 'server-outline';
-
-            return (
-              <TouchableOpacity 
-                key={cat.id} 
-                style={styles.categoryItem} 
-                activeOpacity={0.7}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  router.push({ pathname: '/(tabs)/explore', params: { parentId: cat.id, categoryName: cat.name } });
-                }}
-              >
-                <View style={styles.categoryIconCircle}>
-                  <Ionicons name={iconName as any} size={24} color={colors.text.primary} />
-                </View>
-                <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </Animated.ScrollView>
-
-      {/* Most Loved Section */}
-      <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Most Loved</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
-        {isLoading ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {products.slice(0, 6).map(product => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                style={styles.horizontalProductCard}
-                onPress={() => router.push(`/product/${product.id}`)} 
-              />
-            ))}
-          </ScrollView>
-        )}
-      </Animated.View>
-
-      {/* Trending Reels (Thumbnail trigger) */}
-      {reels.length > 0 && (
-        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim, marginBottom: spacing.xxxl }]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.reelsTitleContainer}>
-              <Ionicons name="play-circle-outline" size={24} color={colors.primary} style={styles.reelsIcon} />
-              <Text style={styles.sectionTitle}>Trending Looks</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/reels')}>
-              <Text style={styles.seeAllText}>Explore</Text>
+    <View style={styles.container}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        
+        {/* ── HEADER ── */}
+        <Animated.View style={[styles.topHeader, { opacity: fadeAnim }]}>
+          {/* LEFT: Row 1 = Logo | Row 2 = Store selector */}
+          <View style={styles.headerLeft}>
+            <Text style={styles.logoText}>CLOSHO</Text>
+            <TouchableOpacity
+              style={styles.locationRow}
+              activeOpacity={0.7}
+              onPress={() => Haptics.selectionAsync()}
+            >
+              <Text style={styles.deliveryLabel}>Exploring </Text>
+              <Text style={styles.storeName}>{currentStore ? currentStore.name : 'All Stores'}</Text>
+              <Ionicons name="chevron-down" size={11} color={colors.primary} style={{ marginLeft: 2, marginTop: 1 }} />
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-            {reels.slice(0, 5).map((reel, index) => (
-              <TouchableOpacity 
-                key={reel.id}
-                style={styles.reelCard} 
-                onPress={() => {
-                  Haptics.impactAsync();
-                  router.push('/(tabs)/reels');
-                }}
-              >
-                <Image
-                  style={styles.reelVideo}
-                  source={{ uri: reel.thumbnail || reel.videoUrl }}
-                />
-                <View style={styles.playIconContainer}>
-                  <View style={styles.playIconBg}>
-                    <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/notifications')}>
+              <Ionicons name="notifications-outline" size={22} color={colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
+              <View style={styles.avatarCircle}>
+                <Ionicons name="person" size={15} color={colors.text.primary} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* ── SEARCH BAR ── */}
+        <Animated.View style={[styles.searchContainer, { opacity: fadeAnim }]}>
+          <Ionicons name="search" size={18} color={colors.text.tertiary} style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search for clothes, shoes..."
+            placeholderTextColor={colors.text.tertiary}
+            style={styles.searchInput}
+            onFocus={() => router.push('/(tabs)/explore')}
+            editable={false}
+            pointerEvents="none"
+          />
+        </Animated.View>
+
+        {/* Banner */}
+        <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Image 
+            source={{ uri: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=800&auto=format&fit=crop' }} 
+            style={styles.bannerImage}
+          />
+          <View style={styles.bannerOverlay}>
+            <Text style={styles.bannerSub}>NEW COLLECTION</Text>
+            <Text style={styles.bannerTitle}>Wear it{'\n'}Today</Text>
+            <TouchableOpacity style={styles.bannerBtn} onPress={() => { Haptics.impactAsync(); router.push('/(tabs)/explore'); }}>
+              <Ionicons name="arrow-forward" size={18} color={colors.text.inverse} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Store Selection (Replaces Men/Women Categories) */}
+        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Select Store</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storesHorizontalList}>
+            {availableStores.map((store, index) => {
+              const isActive = currentStore?.id === store.id;
+              return (
+                <TouchableOpacity 
+                  key={store.id || index}
+                  style={[styles.storeCardBox, isActive && styles.storeCardBoxActive]}
+                  activeOpacity={0.8}
+                  onPress={() => handleSelectStore(store)}
+                >
+                  <View style={styles.storeCardImageContainer}>
+                    <Ionicons 
+                      name="storefront" 
+                      size={24} 
+                      color={isActive ? colors.background : colors.text.primary} 
+                    />
                   </View>
-                </View>
-                <Text style={styles.reelTitle} numberOfLines={2}>{reel.title}</Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={[styles.storeCardTitle, isActive && styles.storeCardTitleActive]} numberOfLines={1}>
+                    {store.name}
+                  </Text>
+                  <Text style={[styles.storeCardSubtitle, isActive && styles.storeCardSubtitleActive]} numberOfLines={1}>
+                    {store.address || 'Explore Collection'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </Animated.View>
-      )}
 
-      {/* New Arrivals / Recommended */}
-      <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>New Arrivals</Text>
-        </View>
-        {isLoading ? (
-          <View style={{ paddingHorizontal: spacing.sm }}>
-            <ProductGridSkeleton count={4} />
+        {/* Most Loved Section */}
+        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Most Loved</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.gridContainer}>
-            {products.slice(6, 14).map(product => (
-              <View key={product.id} style={styles.gridItem}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+              {products.slice(0, 6).map(product => (
                 <ProductCard 
+                  key={product.id} 
                   product={product} 
+                  style={styles.horizontalProductCard}
                   onPress={() => router.push(`/product/${product.id}`)} 
                 />
-              </View>
-            ))}
-          </View>
-        )}
-      </Animated.View>
+              ))}
+            </ScrollView>
+          )}
+        </Animated.View>
 
-    </ScrollView>
+        {/* Trending Reels (Thumbnail trigger) */}
+        {reels.length > 0 && (
+          <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.reelsTitleContainer}>
+                <Ionicons name="play-circle-outline" size={24} color={colors.primary} style={styles.reelsIcon} />
+                <Text style={styles.sectionTitle}>Trending Looks</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/reels')}>
+                <Text style={styles.seeAllText}>Explore</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+              {reels.slice(0, 5).map((reel, index) => (
+                <TouchableOpacity 
+                  key={reel.id}
+                  style={styles.reelCard} 
+                  onPress={() => {
+                    Haptics.impactAsync();
+                    router.push('/(tabs)/reels');
+                  }}
+                >
+                  <Image
+                    style={styles.reelVideo}
+                    source={{ uri: reel.thumbnail || reel.videoUrl }}
+                  />
+                  <View style={styles.playIconContainer}>
+                    <View style={styles.playIconBg}>
+                      <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
+                    </View>
+                  </View>
+                  <Text style={styles.reelTitle} numberOfLines={2}>{reel.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        )}
+
+        {/* New Arrivals / Recommended */}
+        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim, marginTop: spacing.xl }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>New Arrivals</Text>
+          </View>
+          {isLoading ? (
+            <View style={{ paddingHorizontal: spacing.sm }}>
+              <ProductGridSkeleton count={4} />
+            </View>
+          ) : (
+            <View style={styles.gridContainer}>
+              {products.slice(6, 14).map(product => (
+                <View key={product.id} style={styles.gridItem}>
+                  <ProductCard 
+                    product={product} 
+                    onPress={() => router.push(`/product/${product.id}`)} 
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+        </Animated.View>
+
+      </ScrollView>
+    </View>
   );
 }
 
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',   // icons align to top of the logo, not centre
+    alignItems: 'flex-start',
     marginBottom: spacing.lg,
   },
   headerLeft: {
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 4,             // nudge icons to sit level with the logo cap-height
+    paddingTop: 4,
   },
   iconBtn: {
     width: 38,
@@ -357,7 +359,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.surfaceLight,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -370,7 +372,7 @@ const styles = StyleSheet.create({
     height: 46,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: '#1E1E1E',
+    borderColor: colors.borderLight,
   },
   searchIcon: {
     marginRight: spacing.sm,
@@ -380,18 +382,15 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontSize: typography.fontSize.md,
   },
-  filterBtn: {
-    padding: spacing.xs,
-  },
   bannerContainer: {
     height: 220,
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: spacing.xl,
     backgroundColor: colors.surfaceLight,
-    shadowColor: colors.primary,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 8,
   },
@@ -401,10 +400,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   bannerOverlay: {
-    ...StyleSheet.absoluteFill,
+    ...(StyleSheet.absoluteFill as object),
     padding: spacing.xl,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   bannerSub: {
     color: colors.primary,
@@ -435,30 +434,49 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },
-  categoriesContainer: {
-    flexDirection: 'row',
-    marginBottom: spacing.xl,
-  },
-  categoryItem: {
+  storesHorizontalList: {
+    paddingRight: spacing.lg,
     alignItems: 'center',
-    marginRight: spacing.lg,
+    paddingVertical: 4,
   },
-  categoryIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.surface,
+  storeCardBox: {
+    width: 160,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 12,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    marginRight: spacing.md,
+  },
+  storeCardBoxActive: {
+    backgroundColor: colors.text.primary,
+    borderColor: colors.text.primary,
+  },
+  storeCardImageContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  categoryName: {
+  storeCardTitle: {
+    color: colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  storeCardTitleActive: {
+    color: colors.background,
+  },
+  storeCardSubtitle: {
     color: colors.text.secondary,
     fontSize: typography.fontSize.xs,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  },
+  storeCardSubtitleActive: {
+    color: colors.background,
+    opacity: 0.8,
   },
   sectionContainer: {
     marginBottom: spacing.xl,
@@ -509,7 +527,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   playIconContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...(StyleSheet.absoluteFill as object),
     justifyContent: 'center',
     alignItems: 'center',
   },

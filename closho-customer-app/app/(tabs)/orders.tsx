@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
 import { spacing } from '../../src/theme/spacing';
@@ -27,11 +28,12 @@ export default function OrdersScreen() {
     }, [])
   );
 
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'Delivered': return colors.status.success;
-      case 'Shipped': return colors.status.info;
-      case 'Cancelled': return colors.status.error;
+  const getStatusColor = (status?: string) => {
+    const s = (status || '').toLowerCase();
+    switch(s) {
+      case 'delivered': return colors.status.success;
+      case 'shipped': return colors.status.info;
+      case 'cancelled': return colors.status.error;
       default: return colors.primary;
     }
   };
@@ -91,7 +93,7 @@ export default function OrdersScreen() {
             />
           </View>
         ) : (
-          orders.filter(order => activeTab === 'All' || order.status.toLowerCase() === activeTab.toLowerCase()).map(order => (
+          orders.filter(order => activeTab === 'All' || (order.status || '').toLowerCase() === activeTab.toLowerCase()).map(order => (
           <TouchableOpacity 
             key={order.id} 
             style={styles.orderCard} 

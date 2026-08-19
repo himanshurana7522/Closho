@@ -49,9 +49,9 @@ export default function NotificationsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {isLoading && notifications.length === 0 ? (
+        {isLoading && (!notifications || notifications.length === 0) ? (
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-        ) : notifications.length === 0 ? (
+        ) : !notifications || notifications.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="notifications-off-outline" size={64} color={colors.text.tertiary} />
             <Text style={styles.emptyText}>No notifications yet.</Text>

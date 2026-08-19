@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Animated, Easing, Platform } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +19,6 @@ interface ReelPlayerProps {
 }
 
 export const ReelPlayer: React.FC<ReelPlayerProps> = ({ reel, isActive, containerHeight }) => {
-  const videoRef = useRef<Video>(null);
   const router = useRouter();
   const toggleLike = useReelsStore(state => state.toggleLike);
   
@@ -29,28 +28,40 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ reel, isActive, containe
   // Heart animation
   const heartScale = useRef(new Animated.Value(1)).current;
 
+  const player = useVideoPlayer(reel.videoUrl, player => {
+    player.loop = true;
+    player.muted = isMuted;
+  });
+
   useEffect(() => {
-    if (isActive) {
-      videoRef.current?.playAsync().catch(e => {
-        console.log('Autoplay blocked by browser:', e);
+    player.muted = isMuted;
+  }, [isMuted, player]);
+
+  useEffect(() => {
+    try {
+      if (isActive) {
+        player.play();
+        setIsPlaying(true);
+      } else {
+        player.pause();
         setIsPlaying(false);
-      });
-      setIsPlaying(true);
-    } else {
-      videoRef.current?.pauseAsync();
-      setIsPlaying(false);
+      }
+    } catch (error) {
+      console.warn('Video playback error (likely web autoplay policy):', error);
     }
-  }, [isActive]);
+  }, [isActive, player]);
 
   const handleTogglePlay = () => {
-    if (isPlaying) {
-      videoRef.current?.pauseAsync();
-    } else {
-      videoRef.current?.playAsync().catch(e => {
-        console.log('Play blocked by browser:', e);
-      });
+    try {
+      if (isPlaying) {
+        player.pause();
+      } else {
+        player.play();
+      }
+      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.warn('Video playback error:', error);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleLike = () => {
@@ -77,6 +88,8 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ reel, isActive, containe
   const handleShop = () => {
     if (reel.productId) {
       router.push(`/product/${reel.productId}`);
+    } else {
+      router.push('/(tabs)/explore');
     }
   };
 
@@ -87,15 +100,11 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ reel, isActive, containe
         onPress={handleTogglePlay}
         style={styles.videoContainer}
       >
-        <Video
-          ref={videoRef}
-          source={{ uri: reel.videoUrl }}
+        <VideoView
+          player={player}
           style={styles.video}
-          videoStyle={Platform.OS === 'web' ? { width: '100%', height: '100%', objectFit: 'cover' as any } : undefined}
-          resizeMode={ResizeMode.COVER}
-          isLooping
-          isMuted={isMuted}
-          shouldPlay={isActive}
+          contentFit="cover"
+          nativeControls={false}
         />
         
         {/* Play/Pause indicator overlay when paused */}
@@ -117,35 +126,35 @@ export const ReelPlayer: React.FC<ReelPlayerProps> = ({ reel, isActive, containe
         <View style={styles.infoContainer}>
           <Text style={styles.title}>{reel.title}</Text>
           <Text style={styles.description} numberOfLines={2}>{reel.description}</Text>
-          
-          {reel.productId && (
-            <TouchableOpacity style={styles.shopButton} onPress={handleShop}>
-              <Ionicons name="cart-outline" size={16} color={colors.background} style={{ marginRight: 6 }}/>
-              <Text style={styles.shopButtonText}>Shop this Look</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Action Buttons Column */}
         <View style={styles.actionColumn}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleShop}>
+            <View style={styles.shopIconBg}>
+              <Ionicons name="bag-handle" size={22} color="#FFFFFF" style={{ marginLeft: 1 }} />
+            </View>
+            <Text style={styles.actionText}>Shop</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
             <Animated.View style={{ transform: [{ scale: heartScale }] }}>
               <Ionicons 
                 name={reel.isLiked ? "heart" : "heart-outline"} 
                 size={36} 
-                color={reel.isLiked ? colors.status.error : colors.background} 
+                color={reel.isLiked ? colors.status.error : '#FFFFFF'} 
               />
             </Animated.View>
             <Text style={styles.actionText}>{reel.likesCount || 0}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="share-social-outline" size={32} color={colors.background} />
+            <Ionicons name="paper-plane-outline" size={32} color="#FFFFFF" style={styles.iconShadow} />
             <Text style={styles.actionText}>Share</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={() => setIsMuted(!isMuted)}>
-            <Ionicons name={isMuted ? "volume-mute-outline" : "volume-medium-outline"} size={32} color={colors.background} />
+            <Ionicons name={isMuted ? "volume-mute-outline" : "volume-medium-outline"} size={32} color="#FFFFFF" style={styles.iconShadow} />
           </TouchableOpacity>
         </View>
       </View>
@@ -197,29 +206,36 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
   },
   title: {
-    fontSize: typography.fontSize.xxl,
+    fontSize: typography.fontSize.xl,
     fontWeight: 'bold',
-    color: colors.background,
+    color: '#FFFFFF',
     marginBottom: spacing.xs,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   description: {
     fontSize: typography.fontSize.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: spacing.md,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  shopButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  shopIconBg: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  shopButtonText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.background,
-    fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 4,
   },
   actionColumn: {
     width: 60,
@@ -232,8 +248,16 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: typography.fontSize.xs,
-    color: colors.background,
+    color: '#FFFFFF',
     marginTop: 4,
     fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  iconShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   }
 });

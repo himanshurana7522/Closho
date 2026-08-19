@@ -10,6 +10,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useSnackbar } from '../../src/components/ui/SnackbarContext';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { useAuthStore } from '../../src/store/authStore';
+
+GoogleSignin.configure({
+  webClientId: '60006579315-8iiipi2gjk92mn4j4n5ke1r1bmt8lhs8.apps.googleusercontent.com',
+});
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
@@ -45,8 +51,6 @@ export default function RegisterScreen() {
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
-    // Import useAuthStore if not imported at top
-    const { useAuthStore } = require('../../src/store/authStore');
     const result = await useAuthStore.getState().register(data.fullName, data.email, data.password);
     setIsLoading(false);
     
@@ -55,6 +59,39 @@ export default function RegisterScreen() {
       router.push('/(auth)/login');
     } else {
       showSnackbar(result.error || 'Registration failed. Try again.', 'error');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (idToken) {
+        setIsLoading(true);
+        const result = await useAuthStore.getState().googleLogin(idToken);
+        setIsLoading(false);
+        
+        if (result.success) {
+          router.replace('/(tabs)/reels');
+          showSnackbar('Successfully logged in with Google!', 'success');
+        } else {
+          showSnackbar(result.error || 'Google Login failed on server.', 'error');
+        }
+      } else {
+        showSnackbar('Google Sign In cancelled or missing token.', 'error');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        showSnackbar('Google Sign In is already in progress.', 'info');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        showSnackbar('Google Play Services not available or outdated.', 'error');
+      } else {
+        showSnackbar('Google Sign In error: ' + error.message, 'error');
+      }
     }
   };
 
@@ -134,9 +171,10 @@ export default function RegisterScreen() {
 
           <Button 
             title="Continue with Google" 
-            variant="outline" 
-            style={{ marginBottom: spacing.md }} 
-            onPress={() => {}}
+            variant="secondary" 
+            style={{ marginBottom: spacing.md }}
+            onPress={handleGoogleLogin}
+            disabled={isLoading}
           />
           {/* <Button 
             title="Continue with Apple" 

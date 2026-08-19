@@ -1,5 +1,3 @@
-import 'react-native-gesture-handler';
-import 'react-native-reanimated';
 import { Slot, Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -51,7 +49,7 @@ export default function RootLayout() {
       
       // Wait for segments to be fully populated by Expo Router before checking auth guards
       // This prevents a race condition with index.tsx redirecting to splash
-      if (!segments || segments.length === 0) {
+      if (!segments || !segments.length) {
         console.log('[App Startup] Guard: segments not ready, skipping routing');
         return;
       }
@@ -68,8 +66,8 @@ export default function RootLayout() {
         console.log('[App Startup] Guard: Redirecting to login');
         router.replace('/(auth)/login');
       } else if (isAuthenticated && inAuthGroup && !isSplash) {
-        console.log('[App Startup] Guard: Redirecting to tabs');
-        router.replace('/(tabs)');
+        console.log('[App Startup] Guard: Redirecting to reels');
+        router.replace('/(tabs)/reels');
       }
     } catch (err) {
       console.error('[App Startup] FATAL ERROR in routing guard:', err);
@@ -77,12 +75,6 @@ export default function RootLayout() {
   }, [isAuthenticated, isLoading, segments]);
 
   try {
-    if (isLoading) {
-      console.log('[App Startup] RootLayout returning null for isLoading');
-      // Replace `return null` with a safe empty View during loading to prevent native crashes in Bridgeless mode
-      return <SafeAreaProvider><Slot /></SafeAreaProvider>; 
-    }
-
     console.log('[App Startup] RootLayout returning main provider tree');
     return (
       <SafeAreaProvider>

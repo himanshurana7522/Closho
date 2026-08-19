@@ -10,10 +10,8 @@ export default function ReelsScreen() {
   const { reels, fetchReels, isLoading, hasMore } = useReelsStore();
   const [activeReelId, setActiveReelId] = useState<string | null>(null);
   
-  // To handle the screen height correctly, considering tabs
-  let tabBarHeight = 85; 
-  
-  const containerHeight = height - tabBarHeight;
+  // Use a state for dynamic container height to eliminate gaps
+  const [containerHeight, setContainerHeight] = useState(height - 60);
 
   useEffect(() => {
     fetchReels(true); // Initial fetch
@@ -52,7 +50,13 @@ export default function ReelsScreen() {
   }
 
   return (
-    <View style={[styles.container, { height: containerHeight }]}>
+    <View 
+      style={styles.container} 
+      onLayout={(e) => {
+        const { height } = e.nativeEvent.layout;
+        if (height > 0) setContainerHeight(height);
+      }}
+    >
       <FlatList
         data={reels}
         renderItem={renderItem}
@@ -84,6 +88,7 @@ export default function ReelsScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#000',
   },
   loadingContainer: {

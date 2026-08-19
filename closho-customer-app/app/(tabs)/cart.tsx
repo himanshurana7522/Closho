@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxxl * 4,
+    paddingBottom: 220,
   },
   headerRow: {
     flexDirection: 'row',
@@ -373,11 +373,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 95,
     left: 0,
     right: 0,
     padding: spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 34 : spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.xl,
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,

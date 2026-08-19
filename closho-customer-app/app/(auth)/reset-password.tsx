@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Animated, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { colors } from '../../src/theme/colors';
@@ -23,6 +24,7 @@ type ResetForm = z.infer<typeof resetSchema>;
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { resetToken } = useLocalSearchParams<{ resetToken: string }>();
   const { showSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,15 +43,20 @@ export default function ResetPasswordScreen() {
   });
 
   const onSubmit = async (data: ResetForm) => {
+    if (!resetToken) {
+      showSnackbar('Error: Reset token is missing. Please restart the process.', 'error');
+      return;
+    }
+
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+    const result = await useAuthStore.getState().resetPassword(resetToken, data.password);
+    setIsLoading(false);
+
+    if (result.success) {
       showSnackbar('Password reset successful', 'success');
-      router.replaceAll('/(auth)/login');
-    } catch (e) {
-      showSnackbar('Failed to reset password. Try again.', 'error');
-    } finally {
-      setIsLoading(false);
+      router.replace('/(auth)/login');
+    } else {
+      showSnackbar(result.error || 'Failed to reset password. Try again.', 'error');
     }
   };
 
@@ -113,6 +120,12 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.xl,
+  },
+  content: {
+    flex: 1,
+  },
+  btn: {
+    marginTop: spacing.md,
   },
   resetBtn: {
     marginTop: spacing.md,

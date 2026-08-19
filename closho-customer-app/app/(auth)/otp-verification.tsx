@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Animated, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuthStore } from '../../src/store/authStore';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { colors } from '../../src/theme/colors';
@@ -19,6 +20,7 @@ type OtpForm = z.infer<typeof otpSchema>;
 
 export default function OtpVerificationScreen() {
   const router = useRouter();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const { showSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,19 +39,20 @@ export default function OtpVerificationScreen() {
   });
 
   const onSubmit = async (data: OtpForm) => {
+    if (!email) {
+      showSnackbar('Error: Email address is missing.', 'error');
+      return;
+    }
+
     setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      if (data.otp === '123456') {
-        showSnackbar('OTP Verified successfully', 'success');
-        router.push('/(auth)/reset-password');
-      } else {
-        showSnackbar('Invalid OTP. Please try again.', 'error');
-      }
-    } catch (e) {
-      showSnackbar('Verification failed', 'error');
-    } finally {
-      setIsLoading(false);
+    const result = await useAuthStore.getState().verifyPasswordResetOtp(email, data.otp);
+    setIsLoading(false);
+
+    if (result.success && result.resetToken) {
+      showSnackbar('OTP Verified successfully', 'success');
+      router.push({ pathname: '/(auth)/reset-password', params: { resetToken: result.resetToken } });
+    } else {
+      showSnackbar(result.error || 'Invalid OTP. Please try again.', 'error');
     }
   };
 
@@ -140,6 +143,9 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.xl,
+  },
+  content: {
+    flex: 1,
   },
   otpInput: {
     // In a real app, you might use a dedicated OTP input component

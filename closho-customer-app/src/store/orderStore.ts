@@ -99,8 +99,8 @@ export const useOrderStore = create<OrderState>()(
             return { success: false, error: response.data.message };
           }
         } catch (error: any) {
-          console.error('Error creating order:', error);
-          const errorMsg = error.response?.data?.message || error.message || 'Failed to connect to server';
+          console.warn('Error creating order:', error?.message || 'Unknown error');
+          const errorMsg = error?.response?.data?.message || error?.message || 'Failed to connect to server';
           set({ isLoading: false, error: errorMsg });
           return { success: false, error: errorMsg };
         }

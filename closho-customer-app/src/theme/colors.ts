@@ -1,8 +1,8 @@
 export const colors = {
-  // Matte black base for premium feel
-  background: '#0A0A0A',
-  surface: '#121212',
-  surfaceLight: '#1C1C1C',
+  // Midnight Slate base for premium feel
+  background: '#040713',
+  surface: '#0B1123',
+  surfaceLight: '#141E38',
   
   // Champagne Gold accent
   primary: '#D4AF37',

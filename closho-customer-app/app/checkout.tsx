@@ -12,6 +12,7 @@ import { useProfileStore } from '../src/store/profileStore';
 import { useOrderStore } from '../src/store/orderStore';
 import { useStoreStore } from '../src/store/storeStore';
 import { useSnackbar } from '../src/components/ui/SnackbarContext';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -61,27 +62,45 @@ export default function CheckoutScreen() {
     
     try {
       const paymentMethod = paymentMethods.find(p => p.id === selectedPaymentId)?.brand || 'cod';
+      const isRazorpay = paymentMethod.toLowerCase() === 'razorpay' || paymentMethod.toLowerCase() === 'card' || paymentMethod.toLowerCase() === 'upi';
       
       const response = await createOrder({
         storeId: currentStore.id,
         addressId: selectedAddressId,
-        paymentMethod: paymentMethod.toLowerCase(),
+        paymentMethod: isRazorpay ? 'razorpay' : 'cod',
         couponCode: couponCode
       });
 
       if (response.success) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        // Clear cart after successful order
-        clearCart();
+        // If COD, just show success directly
+        if (!isRazorpay) {
+          handleSuccessOrder();
+          return;
+        }
 
-        setShowSuccessModal(true);
-        Animated.spring(successScaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 5,
-          useNativeDriver: true,
-        }).start();
+        // Razorpay Flow
+        // The backend should return razorpayOrderId and amount in response.data
+        const options = {
+          description: 'Closho Order Payment',
+          image: 'https://closho.com/logo.png',
+          currency: 'INR',
+          key: 'rzp_test_TKk3WimBBVHPpT',
+          amount: (total * 100).toString(),
+          name: 'Closho',
+          order_id: response.data?.razorpayOrderId || response.data?.id || '', // Provided by backend
+          theme: { color: colors.primary }
+        };
+
+        try {
+          const data = await RazorpayCheckout.open(options);
+          // Data contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
+          // Verification logic would ideally go here via another API call
+          // For now, assume success if SDK returns success
+          handleSuccessOrder();
+        } catch (error: any) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          showSnackbar('Payment failed or cancelled', 'error');
+        }
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         showSnackbar(response.error || 'Failed to place order', 'error');
@@ -92,6 +111,18 @@ export default function CheckoutScreen() {
     } finally {
       setIsPlacingOrder(false);
     }
+  };
+
+  const handleSuccessOrder = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    clearCart();
+    setShowSuccessModal(true);
+    Animated.spring(successScaleAnim, {
+      toValue: 1,
+      tension: 50,
+      friction: 5,
+      useNativeDriver: true,
+    }).start();
   };
 
   const navigateToOrders = () => {
@@ -174,37 +205,41 @@ export default function CheckoutScreen() {
             </TouchableOpacity>
           </View>
 
-          {paymentMethods.length === 0 ? (
-            <TouchableOpacity style={styles.addCard} onPress={() => router.push('/payment-methods')}>
-              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
-              <Text style={styles.addCardText}>Add a payment method</Text>
-            </TouchableOpacity>
-          ) : (
-            paymentMethods.map((pm) => (
+          {(() => {
+            const defaultMethods = [
+              { id: 'razorpay', brand: 'Razorpay / Card / UPI', last4: '', exp: '', isDefault: true },
+              { id: 'cod', brand: 'Cash on Delivery', last4: '', exp: '', isDefault: false }
+            ];
+            
+            const displayMethods = paymentMethods.length > 0 ? paymentMethods : defaultMethods;
+
+            return displayMethods.map((pm) => (
               <TouchableOpacity
                 key={pm.id}
                 activeOpacity={0.7}
-                style={[styles.optionCard, selectedPaymentId === pm.id && styles.optionCardSelected]}
+                style={[styles.optionCard, (selectedPaymentId === pm.id || (!selectedPaymentId && pm.isDefault)) && styles.optionCardSelected]}
                 onPress={() => handleSelectPayment(pm.id)}
               >
                 <View style={styles.optionContent}>
-                  <View style={[styles.optionIconContainer, selectedPaymentId === pm.id && { backgroundColor: colors.primary + '20' }]}>
-                    <Ionicons name="card-outline" size={20} color={selectedPaymentId === pm.id ? colors.primary : colors.text.primary} />
+                  <View style={[styles.optionIconContainer, (selectedPaymentId === pm.id || (!selectedPaymentId && pm.isDefault)) && { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name={pm.id === 'cod' ? 'cash-outline' : 'card-outline'} size={20} color={(selectedPaymentId === pm.id || (!selectedPaymentId && pm.isDefault)) ? colors.primary : colors.text.primary} />
                   </View>
                   <View style={styles.optionDetails}>
                     <View style={styles.labelRow}>
-                      <Text style={styles.optionLabel}>{pm.brand} •••• {pm.last4}</Text>
+                      <Text style={styles.optionLabel}>
+                        {pm.brand} {pm.last4 ? `•••• ${pm.last4}` : ''}
+                      </Text>
                       {pm.isDefault && <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>DEFAULT</Text></View>}
                     </View>
-                    <Text style={styles.optionSub}>Expires {pm.exp}</Text>
+                    {pm.exp ? <Text style={styles.optionSub}>Expires {pm.exp}</Text> : null}
                   </View>
                 </View>
-                <View style={[styles.radioOuter, selectedPaymentId === pm.id && styles.radioOuterSelected]}>
-                  {selectedPaymentId === pm.id && <View style={styles.radioInner} />}
+                <View style={[styles.radioOuter, (selectedPaymentId === pm.id || (!selectedPaymentId && pm.isDefault)) && styles.radioOuterSelected]}>
+                  {(selectedPaymentId === pm.id || (!selectedPaymentId && pm.isDefault)) && <View style={styles.radioInner} />}
                 </View>
               </TouchableOpacity>
-            ))
-          )}
+            ));
+          })()}
         </View>
 
         {/* Order Summary — from real cart */}
@@ -256,7 +291,7 @@ export default function CheckoutScreen() {
             <View style={styles.successIconCircle}>
               <Ionicons name="checkmark" size={40} color={colors.background} />
             </View>
-            <Text style={styles.successTitle}>Order Placed! 🎉</Text>
+            <Text style={styles.successTitle}>Thank you shopping with Closho! 🎉</Text>
             <Text style={styles.successText}>
               Your order has been successfully placed and will be delivered soon.
             </Text>

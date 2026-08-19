@@ -34,6 +34,7 @@ export default function ProfileScreen() {
     { icon: 'card-outline', title: 'Payment Methods', href: '/payment-methods' },
     { icon: 'heart-outline', title: 'Wishlist', href: '/wishlist' },
     { icon: 'notifications-outline', title: 'Notifications', href: '/notifications' },
+    { icon: 'hardware-chip-outline', title: 'Active Sessions', href: '/sessions' },
     { icon: 'help-buoy-outline', title: 'Help & Support', href: '' },
   ];
 

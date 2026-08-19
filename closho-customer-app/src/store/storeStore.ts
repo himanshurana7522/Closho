@@ -10,6 +10,7 @@ interface StoreState {
   setCurrentStore: (store: Store) => Promise<void>;
   loadSavedStore: () => Promise<void>;
   fetchNearestStore: (lat: number, lng: number, radius?: number, autoSetCurrentStore?: boolean) => Promise<void>;
+  fetchAllStores: () => Promise<void>;
 }
 
 export const useStoreStore = create<StoreState>((set) => ({
@@ -61,6 +62,22 @@ export const useStoreStore = create<StoreState>((set) => ({
     } catch (error) {
       // Silently catch the error to prevent red error toasts globally
       console.log('Nearest store fetch skipped due to network/server issue.');
+    }
+  },
+
+  fetchAllStores: async () => {
+    try {
+      const api = require('../services/api').default;
+      // Using a large radius to fetch all stores if a dedicated /stores endpoint isn't available
+      const response = await api.get(`/stores/nearest?lat=28.6&lng=77.2&radius=9999999`);
+      const responseData = response.data.data;
+      const storesArray = Array.isArray(responseData) ? responseData : responseData?.stores;
+      
+      if (response.data.success && storesArray && storesArray.length > 0) {
+        set({ availableStores: storesArray });
+      }
+    } catch (error) {
+      console.log('Fetch all stores failed.');
     }
   },
 }));
