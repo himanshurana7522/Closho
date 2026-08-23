@@ -11,25 +11,32 @@ export default function TabsLayout() {
     <Tabs
       initialRouteName="reels"
       screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.borderLight,
-        },
+        headerShown: false,
         headerTintColor: colors.text.primary,
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderLight,
-          height: 60,
+          backgroundColor: colors.surface,
+          position: 'absolute',
+          bottom: 24,
+          left: 20,
+          right: 20,
+          borderRadius: 32,
+          height: 70,
+          borderTopWidth: 0,
           paddingBottom: 10,
           paddingTop: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.5,
+          shadowRadius: 15,
+          elevation: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
         },
         tabBarActiveTintColor: colors.text.primary,
         tabBarInactiveTintColor: colors.text.tertiary,
-        headerLeft: () => <StoreSelector />,
-        headerTitle: '', // We use left component for store selector
       }}
     >
       <Tabs.Screen

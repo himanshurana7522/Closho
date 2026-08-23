@@ -1,5 +1,6 @@
 import { Slot, Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '../src/store/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,13 +23,18 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
 
-  // Load auth state on app start
+  const [hasAcceptedTC, setHasAcceptedTC] = useState(true);
+
+  // Load auth state and T&C status on app start
   useEffect(() => {
     console.log('[App Startup] Running loadAuth effect');
     const loadAuth = async () => {
       try {
         console.log('[App Startup] loadAuth executing...');
-        // Zustand persist handles hydration automatically, so we don't need to manually read from AsyncStorage.
+        const accepted = await AsyncStorage.getItem('hasAcceptedTC');
+        if (!accepted) {
+          setHasAcceptedTC(false);
+        }
         setLoading(false);
         console.log('[App Startup] loadAuth finished successfully');
       } catch (err) {
@@ -38,19 +44,21 @@ export default function RootLayout() {
     loadAuth();
   }, []);
 
+  const handleAcceptTC = async () => {
+    await AsyncStorage.setItem('hasAcceptedTC', 'true');
+    setHasAcceptedTC(true);
+  };
+
   // Guard routing
   useEffect(() => {
     try {
       console.log('[App Startup] Running routing guard effect');
-      if (isLoading) {
-        console.log('[App Startup] Guard: isLoading is true, skipping routing');
+      if (isLoading || !hasAcceptedTC) {
+        console.log('[App Startup] Guard: isLoading or T&C not accepted, skipping routing');
         return;
       }
       
-      // Wait for segments to be fully populated by Expo Router before checking auth guards
-      // This prevents a race condition with index.tsx redirecting to splash
       if (!segments || !segments.length) {
-        console.log('[App Startup] Guard: segments not ready, skipping routing');
         return;
       }
 
@@ -58,10 +66,6 @@ export default function RootLayout() {
       const inAuthGroup = segments[0] === '(auth)';
       const isSplash = segments[1] === 'splash';
       
-      console.log(`[App Startup] Guard state: isAuthenticated=${isAuthenticated}, inAuthGroup=${inAuthGroup}, isSplash=${isSplash}`);
-      
-      // We let the splash screen handle the 4s delay before making the final jump,
-      // but if we are already authenticated and not on splash, ensure we are in tabs.
       if (!isAuthenticated && !inAuthGroup) {
         console.log('[App Startup] Guard: Redirecting to login');
         router.replace('/(auth)/login');
@@ -72,15 +76,30 @@ export default function RootLayout() {
     } catch (err) {
       console.error('[App Startup] FATAL ERROR in routing guard:', err);
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, hasAcceptedTC]);
 
   try {
-    console.log('[App Startup] RootLayout returning main provider tree');
     return (
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <SnackbarProvider>
             <Stack screenOptions={{ headerShown: false }} />
+            {!hasAcceptedTC && (
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: 20 }}>
+                <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 16, width: '100%', maxWidth: 400 }}>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#000' }}>Terms & Conditions</Text>
+                  <Text style={{ fontSize: 14, color: '#555', marginBottom: 12, lineHeight: 20 }}>
+                    Welcome to Closho! By continuing to use this application, you agree to our Terms of Service and Privacy Policy.
+                  </Text>
+                  <Text style={{ fontSize: 14, color: '#555', marginBottom: 24, lineHeight: 20 }}>
+                    We collect your location and phone number to provide you with the best shopping experience and nearest stores.
+                  </Text>
+                  <TouchableOpacity onPress={handleAcceptTC} style={{ backgroundColor: '#ff3b30', paddingVertical: 14, borderRadius: 8, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>I Accept & Continue</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </SnackbarProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

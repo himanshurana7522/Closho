@@ -31,10 +31,11 @@ export default function ProfileScreen() {
   const menuItems = [
     { icon: 'person-outline', title: 'Edit Profile', href: '/edit-profile' },
     { icon: 'location-outline', title: 'My Addresses', href: '/addresses' },
-    { icon: 'card-outline', title: 'Payment Methods', href: '/payment-methods' },
     { icon: 'heart-outline', title: 'Wishlist', href: '/wishlist' },
     { icon: 'notifications-outline', title: 'Notifications', href: '/notifications' },
     { icon: 'hardware-chip-outline', title: 'Active Sessions', href: '/sessions' },
+    { icon: 'document-text-outline', title: 'Terms & Conditions', href: '/terms' },
+    { icon: 'shield-checkmark-outline', title: 'Privacy Policy', href: '/privacy' },
     { icon: 'help-buoy-outline', title: 'Help & Support', href: '' },
   ];
 

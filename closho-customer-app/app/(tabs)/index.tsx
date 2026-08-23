@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -13,15 +13,18 @@ import { useStoreStore } from '../../src/store/storeStore';
 import { useReelsStore } from '../../src/store/reelsStore';
 import api from '../../src/services/api';
 import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useProfileStore } from '../../src/store/profileStore';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { currentStore, availableStores, fetchAllStores, fetchNearestStore, setCurrentStore } = useStoreStore();
   const { reels, fetchReels } = useReelsStore();
+  const { addresses, fetchAddresses } = useProfileStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAddressModalVisible, setIsAddressModalVisible] = useState(false);
+  const [isStoreModalVisible, setIsStoreModalVisible] = useState(false);
   
   // Subtle entrance animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -87,6 +90,8 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    fetchReels();
+    fetchAddresses();
     fetchProducts();
   }, [currentStore]);
 
@@ -121,64 +126,83 @@ export default function HomeScreen() {
         
         {/* ── HEADER ── */}
         <Animated.View style={[styles.topHeader, { opacity: fadeAnim }]}>
-          {/* LEFT: Row 1 = Logo | Row 2 = Store selector */}
           <View style={styles.headerLeft}>
             <Text style={styles.logoText}>CLOSHO</Text>
-            <TouchableOpacity
-              style={styles.locationRow}
-              activeOpacity={0.7}
-              onPress={() => Haptics.selectionAsync()}
-            >
-              <Text style={styles.deliveryLabel}>Exploring </Text>
-              <Text style={styles.storeName}>{currentStore ? currentStore.name : 'All Stores'}</Text>
-              <Ionicons name="chevron-down" size={11} color={colors.primary} style={{ marginLeft: 2, marginTop: 1 }} />
+            <Text style={styles.wearItTodayText}>WEAR IT TODAY</Text>
+            <TouchableOpacity style={styles.locationRow} activeOpacity={0.7} onPress={() => {
+              Haptics.selectionAsync();
+              setIsAddressModalVisible(true);
+            }}>
+              <Ionicons name="location-outline" size={14} color={colors.text.secondary} />
+              <Text style={styles.deliveryLabel}>Delivery To: </Text>
+              <Text style={styles.storeName} numberOfLines={1}>Home (Sector 14)</Text>
+              <Ionicons name="chevron-down" size={12} color={colors.text.secondary} style={{ marginLeft: 4, marginTop: 2 }} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/notifications')}>
-              <Ionicons name="notifications-outline" size={22} color={colors.text.primary} />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
-              <View style={styles.avatarCircle}>
-                <Ionicons name="person" size={15} color={colors.text.primary} />
+              <View style={styles.profileImageWrapper}>
+                <Image source={{ uri: 'https://i.pravatar.cc/150?img=68' }} style={styles.profileImage} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => router.push('/notifications')}>
+              <View style={styles.notificationWrapper}>
+                <Ionicons name="notifications-outline" size={22} color={colors.text.primary} />
               </View>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
-        {/* ── SEARCH BAR ── */}
-        <Animated.View style={[styles.searchContainer, { opacity: fadeAnim }]}>
-          <Ionicons name="search" size={18} color={colors.text.tertiary} style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search for clothes, shoes..."
-            placeholderTextColor={colors.text.tertiary}
-            style={styles.searchInput}
-            onFocus={() => router.push('/(tabs)/explore')}
-            editable={false}
-            pointerEvents="none"
-          />
+        {/* ── NEAREST STORE ── */}
+        <Animated.View style={[styles.nearestStoreContainer, { opacity: fadeAnim }]}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setIsStoreModalVisible(true);
+            }}
+          >
+            <Text style={styles.nearestStoreText}>
+              Store: <Text style={{ color: colors.text.primary, fontWeight: 'bold' }}>{currentStore?.name || 'Select Store'}</Text>
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={colors.text.tertiary} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
         </Animated.View>
 
-        {/* Banner */}
+        {/* ── SEARCH BAR ── */}
+        <TouchableOpacity 
+          activeOpacity={0.9} 
+          onPress={() => router.push('/(tabs)/explore')}
+        >
+          <Animated.View style={[styles.searchContainer, { opacity: fadeAnim }]}>
+            <Ionicons name="search" size={20} color={colors.text.tertiary} style={styles.searchIcon} />
+            <Text style={[styles.searchInput, { color: colors.text.tertiary, paddingVertical: 14 }]}>
+              Track order or search...
+            </Text>
+            <Ionicons name="options-outline" size={20} color={colors.text.tertiary} />
+          </Animated.View>
+        </TouchableOpacity>
+
+        {/* ── BANNER ── */}
         <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <Image 
             source={{ uri: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?q=80&w=800&auto=format&fit=crop' }} 
             style={styles.bannerImage}
           />
           <View style={styles.bannerOverlay}>
-            <Text style={styles.bannerSub}>NEW COLLECTION</Text>
-            <Text style={styles.bannerTitle}>Wear it{'\n'}Today</Text>
+            <Text style={styles.bannerSub}>FAST. RELIABLE. YOURS.</Text>
+            <Text style={styles.bannerTitle}>Delivered{'\n'}in just{'\n'}one day.</Text>
             <TouchableOpacity style={styles.bannerBtn} onPress={() => { Haptics.impactAsync(); router.push('/(tabs)/explore'); }}>
-              <Ionicons name="arrow-forward" size={18} color={colors.text.inverse} />
+              <Text style={styles.bannerBtnText}>Shop Now</Text>
+              <Ionicons name="arrow-forward-circle" size={20} color={colors.text.inverse} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
         </Animated.View>
 
-        {/* Store Selection (Replaces Men/Women Categories) */}
+        {/* ── STORES ── */}
         <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Select Store</Text>
+            <Text style={styles.sectionTitle}>Stores</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storesHorizontalList}>
             {availableStores.map((store, index) => {
@@ -192,16 +216,13 @@ export default function HomeScreen() {
                 >
                   <View style={styles.storeCardImageContainer}>
                     <Ionicons 
-                      name="storefront" 
-                      size={24} 
+                      name="storefront-outline" 
+                      size={20} 
                       color={isActive ? colors.background : colors.text.primary} 
                     />
                   </View>
                   <Text style={[styles.storeCardTitle, isActive && styles.storeCardTitleActive]} numberOfLines={1}>
                     {store.name}
-                  </Text>
-                  <Text style={[styles.storeCardSubtitle, isActive && styles.storeCardSubtitleActive]} numberOfLines={1}>
-                    {store.address || 'Explore Collection'}
                   </Text>
                 </TouchableOpacity>
               );
@@ -209,40 +230,13 @@ export default function HomeScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* Most Loved Section */}
-        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Most Loved</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
-              {products.slice(0, 6).map(product => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  style={styles.horizontalProductCard}
-                  onPress={() => router.push(`/product/${product.id}`)} 
-                />
-              ))}
-            </ScrollView>
-          )}
-        </Animated.View>
-
-        {/* Trending Reels (Thumbnail trigger) */}
+        {/* ── TRENDING REELS ── */}
         {reels.length > 0 && (
           <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
             <View style={styles.sectionHeader}>
-              <View style={styles.reelsTitleContainer}>
-                <Ionicons name="play-circle-outline" size={24} color={colors.primary} style={styles.reelsIcon} />
-                <Text style={styles.sectionTitle}>Trending Looks</Text>
-              </View>
+              <Text style={styles.sectionTitle}>Trending</Text>
               <TouchableOpacity onPress={() => router.push('/(tabs)/reels')}>
-                <Text style={styles.seeAllText}>Explore</Text>
+                <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
@@ -260,41 +254,136 @@ export default function HomeScreen() {
                     source={{ uri: reel.thumbnail || reel.videoUrl }}
                   />
                   <View style={styles.playIconContainer}>
-                    <View style={styles.playIconBg}>
-                      <Ionicons name="play" size={20} color={colors.text.inverse} style={{ marginLeft: 2 }} />
-                    </View>
+                    <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.7)" />
                   </View>
-                  <Text style={styles.reelTitle} numberOfLines={2}>{reel.title}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
           </Animated.View>
         )}
 
-        {/* New Arrivals / Recommended */}
-        <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim, marginTop: spacing.xl }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>New Arrivals</Text>
-          </View>
-          {isLoading ? (
-            <View style={{ paddingHorizontal: spacing.sm }}>
-              <ProductGridSkeleton count={4} />
+        {/* ── BEST SELLERS ── */}
+        {products.length > 0 && (
+          <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Best Sellers</Text>
             </View>
-          ) : (
-            <View style={styles.gridContainer}>
-              {products.slice(6, 14).map(product => (
-                <View key={product.id} style={styles.gridItem}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+                {products.slice(0, 6).map(product => (
                   <ProductCard 
+                    key={product.id} 
                     product={product} 
+                    style={styles.horizontalProductCard}
                     onPress={() => router.push(`/product/${product.id}`)} 
                   />
-                </View>
-              ))}
-            </View>
-          )}
-        </Animated.View>
+                ))}
+              </ScrollView>
+            )}
+          </Animated.View>
+        )}
 
+        {/* ── RECOMMENDATIONS ── */}
+        {products.length > 0 && (
+          <Animated.View style={[styles.sectionContainer, { opacity: fadeAnim }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recommendations for You</Text>
+            </View>
+            {isLoading ? (
+              <View style={{ paddingHorizontal: spacing.sm }}>
+                <ProductGridSkeleton count={4} />
+              </View>
+            ) : (
+              <View style={styles.gridContainer}>
+                {/* Randomize items to simulate random for new users, related for old */}
+                {[...products].sort(() => 0.5 - Math.random()).slice(0, 8).map(product => (
+                  <View key={product.id} style={styles.gridItem}>
+                    <ProductCard 
+                      product={product} 
+                      onPress={() => router.push(`/product/${product.id}`)} 
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+          </Animated.View>
+        )}
       </ScrollView>
+
+      {/* ADDRESS SELECTION MODAL */}
+      <Modal visible={isAddressModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Delivery Address</Text>
+              <TouchableOpacity onPress={() => setIsAddressModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: spacing.xl }}>
+              {addresses.length === 0 ? (
+                <Text style={{ color: colors.text.secondary, marginBottom: spacing.lg, textAlign: 'center' }}>No saved addresses yet.</Text>
+              ) : (
+                addresses.map(address => (
+                  <TouchableOpacity key={address.id} style={styles.addressItem} onPress={() => setIsAddressModalVisible(false)}>
+                    <Ionicons name={address.type === 'home' ? 'home' : address.type === 'office' ? 'briefcase' : 'location'} size={20} color={colors.text.tertiary} style={{ marginRight: spacing.md }} />
+                    <View>
+                      <Text style={styles.addressTitle}>{address.type.charAt(0).toUpperCase() + address.type.slice(1)}</Text>
+                      <Text style={styles.addressDesc}>{address.addressLine1}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+              <TouchableOpacity style={styles.addAddressBtn} onPress={() => { setIsAddressModalVisible(false); router.push('/addresses'); }}>
+                <Ionicons name="add" size={20} color={colors.primary} />
+                <Text style={styles.addAddressText}>Add New Address</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* STORE SELECTION MODAL */}
+      <Modal visible={isStoreModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Store</Text>
+              <TouchableOpacity onPress={() => setIsStoreModalVisible(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: spacing.xl }}>
+              <TouchableOpacity style={styles.autoSelectBtn} onPress={() => {
+                // Trigger auto location
+                setIsStoreModalVisible(false);
+              }}>
+                <Ionicons name="locate" size={20} color={colors.text.inverse} style={{ marginRight: 8 }} />
+                <Text style={{ color: colors.text.inverse, fontWeight: 'bold' }}>Auto-select Nearest Store</Text>
+              </TouchableOpacity>
+
+              {availableStores.map(store => (
+                <TouchableOpacity 
+                  key={store.id} 
+                  style={[styles.addressItem, currentStore?.id === store.id && { borderColor: colors.primary, borderWidth: 1 }]} 
+                  onPress={() => {
+                    handleSelectStore(store);
+                    setIsStoreModalVisible(false);
+                  }}
+                >
+                  <Ionicons name="storefront" size={20} color={currentStore?.id === store.id ? colors.primary : colors.text.tertiary} style={{ marginRight: spacing.md }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.addressTitle, currentStore?.id === store.id && { color: colors.primary }]}>{store.name}</Text>
+                    <Text style={styles.addressDesc}>{store.address}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -306,73 +395,92 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? 56 : 40,
-    paddingBottom: spacing.xxxl * 3,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 100, // extra padding for floating tab bar
   },
   topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
   },
   headerLeft: {
     flex: 1,
     paddingRight: spacing.md,
   },
   logoText: {
+    color: colors.text.primary,
+    fontSize: typography.fontSize.xxl,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  wearItTodayText: {
     color: colors.primary,
-    fontSize: 24,
+    fontSize: typography.fontSize.xs,
     fontWeight: 'bold',
-    letterSpacing: 3,
-    marginBottom: spacing.xs,
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   deliveryLabel: {
-    color: colors.text.tertiary,
-    fontSize: 12,
-    fontWeight: '400',
+    color: colors.text.secondary,
+    fontSize: typography.fontSize.sm,
   },
   storeName: {
-    color: colors.text.secondary,
-    fontSize: 12,
+    color: colors.text.primary,
+    fontSize: typography.fontSize.sm,
     fontWeight: '600',
+    maxWidth: 120,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 4,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 19,
-    marginLeft: 2,
+    marginLeft: spacing.sm,
   },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceLight,
+  profileImageWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  notificationWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  nearestStoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: spacing.lg,
+  },
+  nearestStoreText: {
+    color: colors.text.tertiary,
+    fontSize: typography.fontSize.xs,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceLight,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    height: 46,
+    borderRadius: 30,
+    paddingHorizontal: spacing.lg,
+    height: 50,
     marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   searchIcon: {
     marginRight: spacing.sm,
@@ -383,56 +491,49 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.md,
   },
   bannerContainer: {
-    height: 220,
-    borderRadius: 20,
+    height: 240,
+    borderRadius: 24,
     overflow: 'hidden',
-    marginBottom: spacing.xl,
-    backgroundColor: colors.surfaceLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 8,
+    marginBottom: spacing.xxl,
+    backgroundColor: colors.surface,
   },
   bannerImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.7,
+    opacity: 0.6,
   },
   bannerOverlay: {
     ...(StyleSheet.absoluteFill as object),
     padding: spacing.xl,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   bannerSub: {
-    color: colors.primary,
+    color: colors.text.secondary,
     fontSize: typography.fontSize.xs,
-    letterSpacing: 3,
-    marginBottom: spacing.xs,
-    fontWeight: 'bold',
+    letterSpacing: 2,
+    marginBottom: spacing.md,
+    fontWeight: '600',
   },
   bannerTitle: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: '900',
+    fontSize: 32,
+    fontWeight: '800',
     lineHeight: 38,
-    letterSpacing: 1,
+    marginBottom: spacing.lg,
   },
   bannerBtn: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
-    backgroundColor: colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    backgroundColor: colors.surfaceLight,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+  },
+  bannerBtnText: {
+    color: colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: '600',
   },
   storesHorizontalList: {
     paddingRight: spacing.lg,
@@ -440,46 +541,35 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   storeCardBox: {
-    width: 160,
+    minWidth: 160,
+    height: 70,
+    flexDirection: 'row',
     backgroundColor: colors.surfaceLight,
     borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingHorizontal: spacing.md,
   },
   storeCardBoxActive: {
-    backgroundColor: colors.text.primary,
+    backgroundColor: colors.surface,
     borderColor: colors.text.primary,
   },
   storeCardImageContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginRight: spacing.xs,
   },
   storeCardTitle: {
-    color: colors.text.primary,
-    fontSize: typography.fontSize.sm,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  storeCardTitleActive: {
-    color: colors.background,
-  },
-  storeCardSubtitle: {
     color: colors.text.secondary,
     fontSize: typography.fontSize.xs,
+    fontWeight: '600',
   },
-  storeCardSubtitleActive: {
-    color: colors.background,
-    opacity: 0.8,
+  storeCardTitleActive: {
+    color: colors.text.primary,
   },
   sectionContainer: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -489,14 +579,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.xl,
+    fontSize: typography.fontSize.lg,
     fontWeight: 'bold',
-    letterSpacing: 0.5,
   },
   seeAllText: {
-    color: colors.primary,
+    color: colors.text.secondary,
     fontSize: typography.fontSize.sm,
-    fontWeight: '600',
   },
   horizontalList: {
     paddingRight: spacing.lg,
@@ -504,52 +592,97 @@ const styles = StyleSheet.create({
   horizontalProductCard: {
     marginRight: spacing.md,
   },
-  reelsTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reelsIcon: {
-    marginRight: spacing.xs,
-  },
   reelCard: {
-    width: 140,
-    height: 220,
-    marginRight: spacing.md,
+    width: 120,
+    height: 180,
     borderRadius: 16,
+    marginRight: spacing.md,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    backgroundColor: colors.surfaceLight,
   },
   reelVideo: {
     width: '100%',
     height: '100%',
-    opacity: 0.9,
   },
   playIconContainer: {
-    ...(StyleSheet.absoluteFill as object),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reelTitle: {
     position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 12,
-    color: colors.text.primary,
-    fontSize: typography.fontSize.sm,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay.dark,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.xl,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8
+    color: colors.text.primary,
+  },
+  closeBtn: {
+    padding: spacing.xs,
+  },
+  addressItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+  },
+  addressTitle: {
+    color: colors.text.primary,
+    fontWeight: 'bold',
+    fontSize: typography.fontSize.md,
+  },
+  addressDesc: {
+    color: colors.text.tertiary,
+    fontSize: typography.fontSize.sm,
+    marginTop: 2,
+  },
+  addAddressBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxxl * 2,
+  },
+  addAddressText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  autoSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    marginBottom: spacing.lg,
   },
   gridContainer: {
     flexDirection: 'row',
@@ -558,6 +691,6 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     width: '48%',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   }
 });

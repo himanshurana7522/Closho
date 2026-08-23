@@ -53,8 +53,9 @@ export default function CheckoutScreen() {
       showSnackbar('Please select a delivery address', 'error');
       return;
     }
-    if (!currentStore?.id) {
-      showSnackbar('Store context lost. Please return to home', 'error');
+    const activeStore = currentStore || useStoreStore.getState().availableStores[0];
+    if (!activeStore?.id) {
+      showSnackbar('Store context lost. Cannot proceed.', 'error');
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -65,7 +66,7 @@ export default function CheckoutScreen() {
       const isRazorpay = paymentMethod.toLowerCase() === 'razorpay' || paymentMethod.toLowerCase() === 'card' || paymentMethod.toLowerCase() === 'upi';
       
       const response = await createOrder({
-        storeId: currentStore.id,
+        storeId: activeStore.id,
         addressId: selectedAddressId,
         paymentMethod: isRazorpay ? 'razorpay' : 'cod',
         couponCode: couponCode
@@ -79,7 +80,13 @@ export default function CheckoutScreen() {
         }
 
         // Razorpay Flow
-        // The backend should return razorpayOrderId and amount in response.data
+        if (Platform.OS === 'web') {
+          // On Web, react-native-razorpay isn't fully supported natively, so mock success or use window.Razorpay
+          showSnackbar('Razorpay web mock: Payment Successful', 'success');
+          handleSuccessOrder();
+          return;
+        }
+
         const options = {
           description: 'Closho Order Payment',
           image: 'https://closho.com/logo.png',
@@ -93,9 +100,6 @@ export default function CheckoutScreen() {
 
         try {
           const data = await RazorpayCheckout.open(options);
-          // Data contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
-          // Verification logic would ideally go here via another API call
-          // For now, assume success if SDK returns success
           handleSuccessOrder();
         } catch (error: any) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

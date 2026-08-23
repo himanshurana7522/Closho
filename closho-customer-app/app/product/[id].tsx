@@ -234,6 +234,44 @@ export default function ProductDetailsScreen() {
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>{product.description}</Text>
           </View>
+
+          {/* Customer Reviews Mock Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Customer Reviews</Text>
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <Image source={{ uri: 'https://i.pravatar.cc/150?img=11' }} style={styles.reviewerAvatar} />
+                <View style={styles.reviewerInfo}>
+                  <Text style={styles.reviewerName}>Rahul Sharma</Text>
+                  <View style={{ flexDirection: 'row' }}>
+                    <Ionicons name="star" size={12} color={colors.primary} />
+                    <Ionicons name="star" size={12} color={colors.primary} />
+                    <Ionicons name="star" size={12} color={colors.primary} />
+                    <Ionicons name="star" size={12} color={colors.primary} />
+                    <Ionicons name="star" size={12} color={colors.text.tertiary} />
+                  </View>
+                </View>
+                <Text style={styles.reviewDate}>2 days ago</Text>
+              </View>
+              <Text style={styles.reviewText}>Amazing quality! Fits perfectly and looks very premium. Highly recommend.</Text>
+            </View>
+            <TouchableOpacity 
+              style={{
+                marginTop: spacing.md, 
+                paddingVertical: spacing.sm,
+                borderWidth: 1, 
+                borderColor: colors.primary, 
+                borderRadius: 8, 
+                alignItems: 'center'
+              }}
+              onPress={() => {
+                Haptics.selectionAsync();
+                showSnackbar('Review functionality coming soon!', 'info');
+              }}
+            >
+              <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Write a Review</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -344,7 +382,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: width,
     height: 500,
-    resizeMode: 'cover',
+    resizeMode: 'contain',
   },
   scrollContent: {
     paddingBottom: 120,
@@ -381,11 +419,11 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.xxl,
-    fontWeight: '900',
+    fontSize: typography.fontSize.xl,
+    fontWeight: '700',
     flex: 1,
     marginRight: spacing.md,
-    lineHeight: 30,
+    lineHeight: 28,
   },
   wishlistBtn: {
     padding: 4,
@@ -422,8 +460,8 @@ const styles = StyleSheet.create({
   },
   price: {
     color: colors.primary,
-    fontSize: typography.fontSize.display,
-    fontWeight: '900',
+    fontSize: typography.fontSize.xxl,
+    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   originalPrice: {
@@ -450,9 +488,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.lg,
-    fontWeight: 'bold',
-    marginBottom: spacing.md,
+    fontSize: typography.fontSize.md,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
   },
   sizeHeader: {
     flexDirection: 'row',
@@ -540,5 +578,40 @@ const styles = StyleSheet.create({
   },
   addToCartBtn: {
     flex: 1.5,
-  }
+  },
+  reviewCard: {
+    backgroundColor: colors.surfaceLight,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  reviewerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: spacing.sm,
+  },
+  reviewerInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    color: colors.text.primary,
+    fontSize: typography.fontSize.sm,
+    fontWeight: 'bold',
+  },
+  reviewDate: {
+    color: colors.text.tertiary,
+    fontSize: 10,
+  },
+  reviewText: {
+    color: colors.text.secondary,
+    fontSize: typography.fontSize.sm,
+    lineHeight: 20,
+  },
 });

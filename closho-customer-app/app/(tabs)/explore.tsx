@@ -19,6 +19,8 @@ export default function ExploreScreen() {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSort, setActiveSort] = useState('Recommended');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const { showSnackbar } = useSnackbar();
   
   const parentId = (params.parentId as string) || null;
@@ -55,6 +57,8 @@ export default function ExploreScreen() {
       let query = `/products?page=1&limit=50`;
       if (searchQuery) query += `&search=${encodeURIComponent(searchQuery)}`;
       if (activeCategory) query += `&category=${encodeURIComponent(activeCategory)}`;
+      if (minPrice) query += `&minPrice=${minPrice}`;
+      if (maxPrice) query += `&maxPrice=${maxPrice}`;
       
       let sortParam = 'recommended';
       if (activeSort === 'Price: Low to High') sortParam = 'price_asc';
@@ -70,12 +74,19 @@ export default function ExploreScreen() {
         const productsArray = Array.isArray(responseData) ? responseData : (responseData?.products || []);
         
         if (Array.isArray(productsArray) && productsArray.length > 0) {
-          const formattedProducts = productsArray.map((p: any) => ({
+          let formattedProducts = productsArray.map((p: any) => ({
             ...p,
             price: Number(p.price) || 0,
             originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
             imageUrl: p.thumbnail || p.images?.[0] || 'https://via.placeholder.com/400x500?text=No+Image',
           }));
+          
+          // Client-side fallback filter just in case the backend ignores the category query param
+          if (activeCategory) {
+            const filtered = formattedProducts.filter((p: any) => p.categoryId === activeCategory || p.category === activeCategory || (p.category && p.category.id === activeCategory));
+            if (filtered.length > 0) formattedProducts = filtered;
+          }
+          
           setProducts(formattedProducts);
         } else {
           console.log('Explore products array is empty or invalid:', productsArray);
@@ -85,7 +96,7 @@ export default function ExploreScreen() {
         showSnackbar('Failed to load products', 'error');
       }
     } catch (error) {
-      console.error('Explore products fetch error:', error);
+      console.log('Explore products fetch error:', error);
       showSnackbar('Error connecting to server', 'error');
     } finally {
       setIsLoading(false);
@@ -108,6 +119,7 @@ export default function ExploreScreen() {
   const applyFilters = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsFilterVisible(false);
+    fetchProducts();
     showSnackbar('Filters applied', 'success');
   };
 
@@ -115,7 +127,7 @@ export default function ExploreScreen() {
     setRefreshing(true);
     await fetchProducts();
     setRefreshing(false);
-  }, [searchQuery, activeCategory, activeSort]);
+  }, [searchQuery, activeCategory, activeSort, minPrice, maxPrice]);
 
   return (
     <View style={styles.container}>
@@ -236,9 +248,29 @@ export default function ExploreScreen() {
 
               <Text style={styles.filterSectionTitle}>Price Range</Text>
               <View style={styles.priceRow}>
-                <View style={styles.priceInputBox}><Text style={styles.priceInputText}>₹0</Text></View>
+                <View style={styles.priceInputBox}>
+                  <Text style={{ color: colors.text.secondary, position: 'absolute', left: 10 }}>₹</Text>
+                  <TextInput 
+                    style={[styles.priceInputText, { paddingLeft: 20 }]} 
+                    placeholder="0" 
+                    placeholderTextColor={colors.text.tertiary}
+                    keyboardType="numeric"
+                    value={minPrice}
+                    onChangeText={setMinPrice}
+                  />
+                </View>
                 <Text style={styles.priceDivider}>to</Text>
-                <View style={styles.priceInputBox}><Text style={styles.priceInputText}>₹10,000+</Text></View>
+                <View style={styles.priceInputBox}>
+                  <Text style={{ color: colors.text.secondary, position: 'absolute', left: 10 }}>₹</Text>
+                  <TextInput 
+                    style={[styles.priceInputText, { paddingLeft: 20 }]} 
+                    placeholder="Max" 
+                    placeholderTextColor={colors.text.tertiary}
+                    keyboardType="numeric"
+                    value={maxPrice}
+                    onChangeText={setMaxPrice}
+                  />
+                </View>
               </View>
 
               <Text style={styles.filterSectionTitle}>Sort By</Text>
@@ -260,6 +292,9 @@ export default function ExploreScreen() {
               <Button title="Reset" variant="outline" style={styles.resetBtn} onPress={() => {
                 setActiveCategory(null);
                 setSearchQuery('');
+                setMinPrice('');
+                setMaxPrice('');
+                setActiveSort('Recommended');
               }} />
               <Button title="Apply Filters" style={styles.applyBtn} onPress={applyFilters} />
             </View>
@@ -407,11 +442,12 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
     borderRadius: 8,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
   },
   priceInputText: {
     color: colors.text.primary,
     fontSize: typography.fontSize.md,
+    flex: 1,
   },
   priceDivider: {
     color: colors.text.secondary,

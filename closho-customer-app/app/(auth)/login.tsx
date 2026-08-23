@@ -59,7 +59,6 @@ export default function LoginScreen() {
     setIsLoading(false);
     
     if (result.success) {
-      router.replace('/(tabs)/reels');
       showSnackbar('Successfully logged in!', 'success');
     } else {
       showSnackbar(result.error || 'Invalid credentials. Please try again.', 'error');
@@ -93,7 +92,6 @@ export default function LoginScreen() {
     setIsLoading(false);
     
     if (result.success) {
-      router.replace('/(tabs)/reels');
       showSnackbar('Successfully logged in!', 'success');
     } else {
       showSnackbar(result.error || 'Invalid OTP.', 'error');
@@ -116,7 +114,6 @@ export default function LoginScreen() {
         setIsLoading(false);
         
         if (result.success) {
-          router.replace('/(tabs)/reels');
           showSnackbar('Successfully logged in with Google!', 'success');
         } else {
           showSnackbar(result.error || 'Google Login failed on server.', 'error');

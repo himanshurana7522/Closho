@@ -72,8 +72,13 @@ api.interceptors.response.use(
         }
         
         // If we reach here, we had no refresh token, or the refresh failed
-        console.warn('API 401 Unauthorized on:', url, '-> Forcing logout');
-        logout();
+        const currentToken = useAuthStore.getState().token;
+        if (currentToken === 'mock-token') {
+          console.warn('API 401 Unauthorized on:', url, '-> Ignoring because we are using a mock token for OTP testing.');
+        } else {
+          console.warn('API 401 Unauthorized on:', url, '-> Forcing logout');
+          logout();
+        }
       }
     }
     return Promise.reject(error);

@@ -10,6 +10,7 @@ import { Button } from '../src/components/ui/Button';
 import { Input } from '../src/components/ui/Input';
 import { useAuthStore } from '../src/store/authStore';
 import { useSnackbar } from '../src/components/ui/SnackbarContext';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -18,7 +19,22 @@ export default function EditProfileScreen() {
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState('+1 234 567 8900');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
+
+  const pickImage = async () => {
+    Haptics.impactAsync();
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setAvatar(result.assets[0].uri);
+    }
+  };
 
   const handleBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -27,7 +43,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const res = await updateUser({ name, email });
+    const res = await updateUser({ name, email, avatar });
     if (res && !res.success) {
       showSnackbar(res.message || 'Failed to update profile', 'error');
     } else {
@@ -48,18 +64,18 @@ export default function EditProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            {user?.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.8}>
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>{user?.name?.charAt(0) || 'U'}</Text>
+                <Text style={styles.avatarInitial}>{name.charAt(0) || 'U'}</Text>
               </View>
             )}
-            <TouchableOpacity style={styles.editBadge} onPress={() => Haptics.impactAsync()}>
+            <View style={styles.editBadge}>
               <Ionicons name="camera" size={16} color={colors.text.inverse} />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.formSection}>

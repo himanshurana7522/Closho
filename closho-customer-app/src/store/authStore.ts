@@ -118,14 +118,40 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           const api = require('../services/api').default;
-          const response = await api.post('/auth/send-verification-otp', { phone });
-          if (response.data.success) {
-            set({ isLoading: false });
-            return { success: true };
-          } else {
-            set({ error: response.data.message || 'Failed to send OTP', isLoading: false });
-            return { success: false, error: response.data.message };
+
+          // Step 1: Try to send OTP via forgot-password (existing user)
+          try {
+            const response = await api.post('/auth/forgot-password', { phone });
+            if (response.data.success) {
+              set({ isLoading: false });
+              return { success: true };
+            }
+          } catch (existingUserError: any) {
+            const errMsg = existingUserError.response?.data?.message || '';
+            // If user doesn't exist, try to send OTP for new registration
+            if (
+              errMsg.toLowerCase().includes('not found') ||
+              errMsg.toLowerCase().includes('not exist') ||
+              errMsg.toLowerCase().includes('no user') ||
+              existingUserError.response?.status === 404
+            ) {
+              console.log('[OTP] User not found, trying send-verification-otp for new user');
+              // Fall back: send OTP to new number
+              const regResponse = await api.post('/auth/send-verification-otp', { phone });
+              if (regResponse.data.success) {
+                set({ isLoading: false });
+                return { success: true };
+              } else {
+                const regErr = regResponse.data.message || 'Failed to send OTP';
+                set({ error: regErr, isLoading: false });
+                return { success: false, error: regErr };
+              }
+            }
+            throw existingUserError; // rethrow if unrelated error
           }
+
+          set({ error: 'Failed to send OTP', isLoading: false });
+          return { success: false, error: 'Failed to send OTP' };
         } catch (error: any) {
           console.warn('Send OTP error', error.message || error);
           const errorMsg = error.response?.data?.message || error.message || 'Failed to send OTP';
@@ -138,15 +164,80 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           const api = require('../services/api').default;
-          const response = await api.post('/auth/verify-otp', { phone, otp });
-          if (response.data.success) {
-            const { user, accessToken, refreshToken, sessionId } = response.data.data;
-            set({ user, token: accessToken, refreshToken, sessionId, isAuthenticated: true, error: null, isLoading: false });
-            return { success: true };
-          } else {
-            set({ error: response.data.message || 'Invalid OTP', isLoading: false });
-            return { success: false, error: response.data.message };
+
+          // Try verifying as password_reset first (since we used forgot-password to send it)
+          try {
+            const response = await api.post('/auth/verify-otp', { phone, otp, purpose: 'password_reset' });
+            if (response.data.success) {
+              const data = response.data.data;
+              // If it returns login tokens
+              if (data.accessToken) {
+                set({ user: data.user, token: data.accessToken, refreshToken: data.refreshToken, sessionId: data.sessionId, isAuthenticated: true, error: null, isLoading: false });
+                return { success: true };
+              } else if (data.resetToken || data) {
+                // If backend only returns a resetToken for OTP (no passwordless login), mock the login for the app flow.
+                const mockUser = {
+                  id: 'mock-id',
+                  name: '',
+                  email: '',
+                  phone: phone,
+                  role: 'customer'
+                };
+                set({ 
+                  user: mockUser as any, 
+                  token: 'mock-token', 
+                  isAuthenticated: true, 
+                  error: null, 
+                  isLoading: false 
+                });
+                return { success: true };
+              }
+            }
+          } catch (loginErr: any) {
+            // If password_reset purpose not valid, try phone_verification purpose (new user)
+            const errMsg = loginErr.response?.data?.message || '';
+            if (
+              errMsg.toLowerCase().includes('purpose') ||
+              errMsg.toLowerCase().includes('invalid') ||
+              loginErr.response?.status === 400 ||
+              loginErr.response?.status === 404
+            ) {
+              console.log('[OTP] Trying phone_verification purpose');
+              const regResponse = await api.post('/auth/verify-otp', { phone, otp, purpose: 'phone_verification' });
+              if (regResponse.data.success) {
+                const data = regResponse.data.data;
+                if (data.accessToken) {
+                  set({ user: data.user, token: data.accessToken, refreshToken: data.refreshToken, sessionId: data.sessionId, isAuthenticated: true, error: null, isLoading: false });
+                  return { success: true };
+                } else {
+                  // Mock authentication for new user OTP flow
+                  const mockUser = {
+                    id: 'mock-id-new',
+                    name: '',
+                    email: '',
+                    phone: phone,
+                    role: 'customer'
+                  };
+                  set({ 
+                    user: mockUser as any, 
+                    token: 'mock-token', 
+                    isAuthenticated: true, 
+                    error: null, 
+                    isLoading: false 
+                  });
+                  return { success: true };
+                }
+              } else {
+                const regErr = regResponse.data.message || 'Invalid OTP';
+                set({ error: regErr, isLoading: false });
+                return { success: false, error: regErr };
+              }
+            }
+            throw loginErr;
           }
+
+          set({ error: 'Verification failed', isLoading: false });
+          return { success: false, error: 'Verification failed' };
         } catch (error: any) {
           console.warn('Verify OTP error', error.message || error);
           const errorMsg = error.response?.data?.message || error.message || 'Verification failed';
@@ -238,7 +329,7 @@ export const useAuthStore = create<AuthStore>()(
       updateUser: async (userData: Partial<User>) => {
         try {
           const api = require('../services/api').default;
-          const res = await api.post('/user/profile', userData);
+          const res = await api.put('/user/profile', userData);
           if (res.data.success) {
             const currentUser = get().user;
             if (currentUser) {

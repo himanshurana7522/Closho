@@ -1,13 +1,13 @@
 export const colors = {
-  // Midnight Slate base for premium feel
-  background: '#040713',
-  surface: '#0B1123',
-  surfaceLight: '#141E38',
+  // Midnight Dark base for premium feel
+  background: '#121212',
+  surface: '#1A1C19',
+  surfaceLight: '#232522',
   
-  // Champagne Gold accent
-  primary: '#D4AF37',
-  primaryDark: '#B28A25',
-  primaryLight: '#F2D588',
+  // Sage Green accent (from theme screenshot)
+  primary: '#B0B7A5',
+  primaryDark: '#8F9685',
+  primaryLight: '#D4DFC7',
 
   // Typography
   text: {

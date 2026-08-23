@@ -106,21 +106,21 @@ export const ProductCard = ({ product, onPress, style }: ProductCardProps) => {
 const styles = StyleSheet.create({
   container: {
     width: cardWidth,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     backgroundColor: colors.overlay.glass,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.overlay.light,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   imageContainer: {
     width: '100%',
-    height: cardWidth * 1.45,
+    height: cardWidth * 1.1, // more square
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     overflow: 'hidden',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   image: {
     width: '100%',
@@ -128,14 +128,14 @@ const styles = StyleSheet.create({
   },
   wishlistBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     zIndex: 10,
   },
   wishlistIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(10, 10, 10, 0.6)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -144,8 +144,8 @@ const styles = StyleSheet.create({
   },
   badgesBottom: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    bottom: 6,
+    left: 6,
     flexDirection: 'row',
   },
   ratingBadge: {
@@ -155,23 +155,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   ratingText: {
     color: colors.text.primary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   infoContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   name: {
     color: colors.text.secondary,
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     fontWeight: '500',
-    marginBottom: 4,
-    lineHeight: 18,
+    marginBottom: 2,
+    lineHeight: 16,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   price: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.sm,
     fontWeight: 'bold',
     marginRight: spacing.xs,
   },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   discountText: {
     color: colors.primary,
-    fontSize: typography.fontSize.xs,
+    fontSize: 9,
     fontWeight: 'bold',
   },
 });
