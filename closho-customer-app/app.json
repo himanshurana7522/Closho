@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "closho-customer-app",
+    "name": "Closho",
     "slug": "closho-customer-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/closho-logo-premium-transparent.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "closhocustomerapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/closho-logo-premium-transparent.png",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.closho.customerapp"
     },
     "android": {
       "package": "com.closho.customerapp",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
-        "foregroundImage": "./assets/images/closho-logo-premium-transparent.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/closho-logo-premium-transparent.png"
+        "monochromeImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -31,7 +31,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#000000",
-          "image": "./assets/images/closho-logo-premium-transparent.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 200
         }
       ],
