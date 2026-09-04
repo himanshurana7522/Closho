@@ -50,8 +50,11 @@ export const useOrderStore = create<OrderState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await api.get('/orders?status=all&page=1&limit=50');
-          if (response.data.success) {
-            const mappedOrders = response.data.data.orders.map((o: any) => ({
+          if (response.data.success && response.data.data) {
+            const rawOrders = Array.isArray(response.data.data) 
+              ? response.data.data 
+              : (response.data.data.orders || response.data.data.items || []);
+            const mappedOrders = rawOrders.map((o: any) => ({
               id: o.id,
               orderNumber: o.orderNumber,
               date: new Date(o.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),

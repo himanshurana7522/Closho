@@ -47,8 +47,9 @@ export const useWishlistStore = create<WishlistState>()(
         try {
           const api = require('../services/api').default;
           const res = await api.get('/wishlist');
-          if (res.data.success && res.data.data.items) {
-            set({ items: res.data.data.items });
+          if (res.data.success && res.data.data) {
+            const items = Array.isArray(res.data.data) ? res.data.data : (res.data.data.items || []);
+            set({ items });
           }
         } catch (error) {
           console.error('Fetch wishlist error', error);

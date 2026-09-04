@@ -57,7 +57,8 @@ export const useReelsStore = create<ReelsState>((set, get) => ({
       const targetPage = refresh ? 1 : page;
       const response = await api.get(`/reels?page=${targetPage}&limit=10`);
       
-      const newReels = response.data?.data?.reels || [];
+      const resData = response.data?.data;
+      const newReels = Array.isArray(resData) ? resData : (resData?.reels || resData?.items || []);
       const hasNextPage = newReels.length === 10; // Assuming limit is 10
 
       set((state) => ({

@@ -149,14 +149,17 @@ export const useCartStore = create<CartState>()(
           const storeId = require('./storeStore').useStoreStore.getState().currentStore?.id;
           const url = storeId ? `/cart?storeId=${storeId}` : '/cart';
           const res = await api.get(url);
-          if (res.data.success && res.data.data.items) {
-            const mappedItems = res.data.data.items.map((item: any) => ({
+          if (res.data.success && res.data.data) {
+            const rawItems = Array.isArray(res.data.data) 
+              ? res.data.data 
+              : (res.data.data.items || res.data.data.cart?.items || []);
+            const mappedItems = rawItems.map((item: any) => ({
               id: item.id,
-              productId: item.product?.id || '',
+              productId: item.product?.id || item.productId || '',
               name: item.product?.name || 'Unknown',
-              price: Number(item.product?.price) || 0,
-              size: item.variant?.size || 'M',
-              colorName: item.variant?.color || 'Default',
+              price: Number(item.product?.price || item.price) || 0,
+              size: item.variant?.size || item.size || 'M',
+              colorName: item.variant?.color || item.color || 'Default',
               colorHex: item.variant?.colorHex || '#000000',
               quantity: item.quantity,
               image: item.product?.thumbnail || item.product?.images?.[0] || 'https://via.placeholder.com/150',
