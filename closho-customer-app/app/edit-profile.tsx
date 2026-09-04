@@ -17,9 +17,9 @@ export default function EditProfileScreen() {
   const { user, updateUser } = useAuthStore();
   const { showSnackbar } = useSnackbar();
 
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.name || (user as any)?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phone || '');
+  const [phone, setPhone] = useState(user?.phone || (user as any)?.phone_no || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
 
   const pickImage = async () => {
@@ -43,7 +43,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const res = await updateUser({ name, email, avatar });
+    const res = await updateUser({ name, email, phone, avatar });
     if (res && !res.success) {
       showSnackbar(res.message || 'Failed to update profile', 'error');
     } else {

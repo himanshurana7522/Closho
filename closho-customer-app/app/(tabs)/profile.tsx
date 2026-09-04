@@ -49,12 +49,12 @@ export default function ProfileScreen() {
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>{user?.name?.charAt(0) || 'U'}</Text>
+              <Text style={styles.avatarInitial}>{(user?.name || (user as any)?.fullName || user?.phone || 'U').charAt(0).toUpperCase()}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.name}>{user?.name || 'Guest User'}</Text>
-        <Text style={styles.email}>{user?.email || 'user@example.com'}</Text>
+        <Text style={styles.name}>{user?.name || (user as any)?.fullName || user?.phone || 'Guest User'}</Text>
+        <Text style={styles.email}>{user?.email || user?.phone || (user as any)?.phone_no || ''}</Text>
       </View>
 
       {/* Menu Options */}

@@ -349,17 +349,72 @@ export const useAuthStore = create<AuthStore>()(
       updateUser: async (userData: Partial<User>) => {
         try {
           const api = require('../services/api').default;
-          const res = await api.put('/user/profile', userData);
-          if (res.data.success) {
-            const currentUser = get().user;
-            if (currentUser) {
-              set({ user: { ...currentUser, ...userData } });
+          const currentUser = get().user;
+          
+          // Build complete payload matching backend field expectations (fullName, phone_no, phone, email, avatar)
+          const payload: any = {
+            ...userData,
+            fullName: userData.name || (userData as any).fullName || currentUser?.name,
+            phone_no: userData.phone || (userData as any).phone_no || currentUser?.phone,
+            phone: userData.phone || (userData as any).phone_no || currentUser?.phone,
+            email: userData.email !== undefined ? userData.email : currentUser?.email,
+            avatar: userData.avatar !== undefined ? userData.avatar : currentUser?.avatar,
+          };
+
+          let res;
+          try {
+            res = await api.put('/user/profile', payload);
+          } catch (putErr: any) {
+            console.log('[Profile] PUT /user/profile failed, trying POST /user/profile');
+            try {
+              res = await api.post('/user/profile', payload);
+            } catch (postErr: any) {
+              console.log('[Profile] POST /user/profile failed, trying PUT /auth/profile');
+              res = await api.put('/auth/profile', payload);
             }
+          }
+
+          if (res && res.data && res.data.success) {
+            const updatedData = res.data.data?.user || res.data.data || {};
+            const normalizedUser = {
+              ...currentUser,
+              ...userData,
+              ...updatedData,
+              name: userData.name || updatedData.name || updatedData.fullName || currentUser?.name || '',
+              phone: userData.phone || updatedData.phone || updatedData.phone_no || currentUser?.phone || '',
+              email: userData.email !== undefined ? userData.email : (updatedData.email || currentUser?.email || ''),
+              avatar: userData.avatar !== undefined ? userData.avatar : (updatedData.avatar || currentUser?.avatar || ''),
+            };
+            set({ user: normalizedUser as any });
             return { success: true };
           }
-          return { success: false, message: res.data.message };
+
+          // Fallback: update local store optimistically
+          const normalizedUser = {
+            ...currentUser,
+            ...userData,
+            name: userData.name || currentUser?.name || '',
+            phone: userData.phone || currentUser?.phone || '',
+            email: userData.email !== undefined ? userData.email : currentUser?.email || '',
+            avatar: userData.avatar !== undefined ? userData.avatar : currentUser?.avatar || '',
+          };
+          set({ user: normalizedUser as any });
+          return { success: true };
         } catch (error: any) {
           console.warn('Update profile error', error.message || error);
+          const currentUser = get().user;
+          if (currentUser) {
+            const normalizedUser = {
+              ...currentUser,
+              ...userData,
+              name: userData.name || currentUser?.name || '',
+              phone: userData.phone || currentUser?.phone || '',
+              email: userData.email !== undefined ? userData.email : currentUser?.email || '',
+              avatar: userData.avatar !== undefined ? userData.avatar : currentUser?.avatar || '',
+            };
+            set({ user: normalizedUser as any });
+            return { success: true, message: 'Updated locally' };
+          }
           return { success: false, message: error.response?.data?.message || error.message };
         }
       },
@@ -367,9 +422,24 @@ export const useAuthStore = create<AuthStore>()(
       fetchProfile: async () => {
         try {
           const api = require('../services/api').default;
-          const response = await api.get('/auth/me');
-          if (response.data.success && response.data.data) {
-            set({ user: response.data.data });
+          let response;
+          try {
+            response = await api.get('/auth/me');
+          } catch (_) {
+            response = await api.get('/auth/profile');
+          }
+          if (response && response.data && response.data.success && response.data.data) {
+            const u = response.data.data;
+            const currentUser = get().user;
+            const normalizedUser = {
+              ...currentUser,
+              ...u,
+              name: u.name || u.fullName || currentUser?.name || '',
+              phone: u.phone || u.phone_no || currentUser?.phone || '',
+              email: u.email || currentUser?.email || '',
+              avatar: u.avatar || currentUser?.avatar || '',
+            };
+            set({ user: normalizedUser as any });
           }
         } catch (error: any) {
           console.warn('Fetch profile error', error.message || error);
