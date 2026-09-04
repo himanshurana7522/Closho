@@ -67,7 +67,7 @@ export default function ProductDetailsScreen() {
                 hex: p.variants.find((v: any) => v.color === c)?.colorHex || '#000000'
               })) : [{ id: 'c1', name: 'Default', hex: '#000000' }],
             sizes: p.variants ? 
-              Array.from(new Set(p.variants.map((v: any) => String(v.size)))) : ['M'],
+              Array.from(new Set<string>(p.variants.map((v: any) => String(v.size)))) : ['M'],
             rawVariants: p.variants || [],
           };
           
@@ -253,7 +253,7 @@ export default function ProductDetailsScreen() {
                 </View>
                 <Text style={styles.reviewDate}>2 days ago</Text>
               </View>
-              <Text style={styles.reviewText}>Amazing quality! Fits perfectly and looks very premium. Highly recommend.</Text>
+              <Text style={styles.reviewBody}>Amazing quality! Fits perfectly and looks very premium. Highly recommend.</Text>
             </View>
             <TouchableOpacity 
               style={{
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     fontSize: 10,
   },
-  reviewText: {
+  reviewBody: {
     color: colors.text.secondary,
     fontSize: typography.fontSize.sm,
     lineHeight: 20,
