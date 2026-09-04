@@ -28,7 +28,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { showSnackbar } = useSnackbar();
   const [isLoading, setIsLoading] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('email');
+  const [loginMethod, setLoginMethod] = useState<'mobile' | 'email'>('mobile');
   
   // Mobile OTP state
   const [phone, setPhone] = useState('');
@@ -148,16 +148,16 @@ export default function LoginScreen() {
           {/* Tabs */}
           <View style={styles.tabContainer}>
             <TouchableOpacity 
+              style={[styles.tab, loginMethod === 'mobile' && styles.activeTab]} 
+              onPress={() => setLoginMethod('mobile')}
+            >
+              <Text style={[styles.tabText, loginMethod === 'mobile' && styles.activeTabText]}>Mobile Number</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
               style={[styles.tab, loginMethod === 'email' && styles.activeTab]} 
               onPress={() => setLoginMethod('email')}
             >
               <Text style={[styles.tabText, loginMethod === 'email' && styles.activeTabText]}>Email</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, loginMethod === 'mobile' && styles.activeTab]} 
-              onPress={() => setLoginMethod('mobile')}
-            >
-              <Text style={[styles.tabText, loginMethod === 'mobile' && styles.activeTabText]}>Mobile</Text>
             </TouchableOpacity>
           </View>
 
