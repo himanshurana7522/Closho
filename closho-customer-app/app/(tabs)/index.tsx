@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Animated, Platform, ActivityIndicator, RefreshControl, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -16,6 +17,7 @@ import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
 import { useProfileStore } from '../../src/store/profileStore';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { currentStore, availableStores, fetchAllStores, fetchNearestStore, setCurrentStore } = useStoreStore();
   const { reels, fetchReels } = useReelsStore();
@@ -117,7 +119,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <ScrollView 
         style={styles.container} 
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 36 : 44) + spacing.xs }]} 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />

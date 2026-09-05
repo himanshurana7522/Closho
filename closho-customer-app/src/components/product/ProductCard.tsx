@@ -1,14 +1,11 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing } from '../../theme/spacing';
 import * as Haptics from 'expo-haptics';
 import { useWishlistStore } from '../../store/wishlistStore';
-
-const { width } = Dimensions.get('window');
-const cardWidth = (width - spacing.md * 3) / 2; // 2 columns with padding
 
 export interface Product {
   id: string;
@@ -31,9 +28,18 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product, onPress, style }: ProductCardProps) => {
+  const { width } = useWindowDimensions();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const isWishlisted = isInWishlist(product.id);
+
+  // Dynamic responsive layout calculation
+  const isTablet = width >= 600;
+  const columns = isTablet ? (width >= 900 ? 4 : 3) : 2;
+  const computedWidth = Math.min(
+    isTablet ? 240 : 200,
+    (width - spacing.md * (columns + 1)) / columns
+  );
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -57,15 +63,15 @@ export const ProductCard = ({ product, onPress, style }: ProductCardProps) => {
   };
 
   return (
-    <Animated.View style={[styles.container, style, { transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View style={[styles.container, { width: computedWidth }, style, { transform: [{ scale: scaleAnim }] }]}>
       <TouchableOpacity 
         activeOpacity={0.9} 
         onPressIn={handlePressIn} 
         onPressOut={handlePressOut} 
         onPress={onPress}
       >
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: product.imageUrl }} style={styles.image} />
+        <View style={[styles.imageContainer, { height: computedWidth * 1.05 }]}>
+          <Image source={{ uri: product.imageUrl }} style={styles.image} resizeMode="cover" />
           
           <TouchableOpacity style={styles.wishlistBtn} onPress={handleWishlist}>
             <View style={styles.wishlistIconBg}>
@@ -105,7 +111,6 @@ export const ProductCard = ({ product, onPress, style }: ProductCardProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    width: cardWidth,
     marginBottom: spacing.lg,
     backgroundColor: colors.overlay.glass,
     borderRadius: 8,
@@ -115,7 +120,6 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: cardWidth * 1.1, // more square
     backgroundColor: 'transparent',
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,

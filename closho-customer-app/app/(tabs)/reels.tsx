@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, FlatList, Dimensions, ActivityIndicator, Text, ViewToken } from 'react-native';
+import { usePathname } from 'expo-router';
 import { useReelsStore } from '../../src/store/reelsStore';
 import { ReelPlayer } from '../../src/components/reels/ReelPlayer';
 import { colors } from '../../src/theme/colors';
@@ -7,6 +8,8 @@ import { colors } from '../../src/theme/colors';
 const { height } = Dimensions.get('window');
 
 export default function ReelsScreen() {
+  const pathname = usePathname();
+  const isFocused = pathname === '/reels' || pathname === '/(tabs)/reels';
   const { reels, fetchReels, isLoading, hasMore } = useReelsStore();
   const [activeReelId, setActiveReelId] = useState<string | null>(null);
   
@@ -30,7 +33,7 @@ export default function ReelsScreen() {
   const renderItem = ({ item }: { item: any }) => (
     <ReelPlayer 
       reel={item} 
-      isActive={item.id === activeReelId} 
+      isActive={isFocused && item.id === activeReelId} 
       containerHeight={containerHeight}
     />
   );

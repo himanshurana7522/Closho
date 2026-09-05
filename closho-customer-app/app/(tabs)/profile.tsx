@@ -36,7 +36,7 @@ export default function ProfileScreen() {
     { icon: 'hardware-chip-outline', title: 'Active Sessions', href: '/sessions' },
     { icon: 'document-text-outline', title: 'Terms & Conditions', href: '/terms' },
     { icon: 'shield-checkmark-outline', title: 'Privacy Policy', href: '/privacy' },
-    { icon: 'help-buoy-outline', title: 'Help & Support', href: '' },
+    { icon: 'help-buoy-outline', title: 'Help & Support', href: '/help' },
   ];
 
   return (

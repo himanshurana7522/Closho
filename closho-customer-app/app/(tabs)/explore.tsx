@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Animated, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme/colors';
 import { typography } from '../../src/theme/typography';
@@ -13,6 +14,7 @@ import { useCategoryStore } from '../../src/store/categoryStore';
 import { ProductGridSkeleton } from '../../src/components/ui/SkeletonLoader';
 
 export default function ExploreScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,8 +105,6 @@ export default function ExploreScreen() {
     }
   };
 
-  // Re-fetch when filters or search change
-  // Note: For search, you might want to debounce in a real app
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchProducts();
@@ -129,10 +129,12 @@ export default function ExploreScreen() {
     setRefreshing(false);
   }, [searchQuery, activeCategory, activeSort, minPrice, maxPrice]);
 
+  const topInsetPadding = Math.max(insets.top, Platform.OS === 'android' ? 36 : 44) + spacing.xs;
+
   return (
     <View style={styles.container}>
       {/* Search Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topInsetPadding }]}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={colors.text.tertiary} style={styles.searchIcon} />
           <TextInput 
